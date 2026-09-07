@@ -59,3 +59,69 @@ def delete_venue(venue_id: int) -> bool:
 
 def count_venues() -> int:
     return get_db().execute("SELECT COUNT(*) AS n FROM venues").fetchone()["n"]
+
+
+# Simulations ----------------------------------------------------------------
+
+
+def create_simulation(venue_id: int | None, venue_snapshot: str, config_json: str,
+                      seed: int, status: str) -> int:
+    """Record a run. `venue_snapshot` is the cell string as it was at run time,
+    so a saved result stays meaningful after the venue is edited."""
+    db = get_db()
+    cursor = db.execute(
+        """
+        INSERT INTO simulations (venue_id, venue_snapshot, config_json, seed, status)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (venue_id, venue_snapshot, config_json, seed, status),
+    )
+    db.commit()
+    return cursor.lastrowid
+
+
+def create_result(simulation_id: int, metrics_json: str, trace_blob: bytes,
+                  heatmap_json: str | None = None, bottlenecks_json: str | None = None,
+                  recommendations_json: str | None = None) -> int:
+    db = get_db()
+    cursor = db.execute(
+        """
+        INSERT INTO results (simulation_id, metrics_json, heatmap_json,
+                             bottlenecks_json, recommendations_json, trace_blob)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (simulation_id, metrics_json, heatmap_json, bottlenecks_json,
+         recommendations_json, trace_blob),
+    )
+    db.commit()
+    return cursor.lastrowid
+
+
+def get_simulation(simulation_id: int) -> dict | None:
+    row = get_db().execute(
+        """
+        SELECT s.id, s.venue_id, s.venue_snapshot, s.config_json, s.seed, s.status,
+               s.created_at,
+               r.id AS result_id, r.metrics_json, r.heatmap_json, r.bottlenecks_json,
+               r.recommendations_json, r.trace_blob
+          FROM simulations s
+          LEFT JOIN results r ON r.simulation_id = s.id
+         WHERE s.id = ?
+        """,
+        (simulation_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def list_simulations(venue_id: int | None = None) -> list[dict]:
+    sql = """
+        SELECT s.id, s.venue_id, s.status, s.seed, s.created_at, r.metrics_json
+          FROM simulations s
+          LEFT JOIN results r ON r.simulation_id = s.id
+    """
+    params: tuple = ()
+    if venue_id is not None:
+        sql += " WHERE s.venue_id = ?"
+        params = (venue_id,)
+    sql += " ORDER BY s.id DESC"
+    return [dict(row) for row in get_db().execute(sql, params).fetchall()]

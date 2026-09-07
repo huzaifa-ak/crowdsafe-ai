@@ -1,0 +1,19 @@
+{
+  "config": {
+    "num_agents": 60,
+    "speed": 1.0,
+    "cell_capacity": 3,
+    "max_ticks": 600,
+    "seed": 42
+  },
+  "status": "complete",
+  "ticks": 73,
+  "clearing_ticks": 73,
+  "evacuated": 60,
+  "stranded": 0,
+  "exit_usage": {
+    "1": 0,
+    "2": 60
+  },
+  "trace_sha256": "df63b31f9af01155f0e8b08274aa0e074d3115ece98f77b63800b6d9dff1b542"
+}

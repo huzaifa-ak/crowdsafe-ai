@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 6 of 20 complete. Deployed at
+Four-week build, one developer. Day 7 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -76,6 +76,18 @@ nearest exit, and walks out — slowed by the people ahead of it, capped at thre
 per square metre, and admitted through each doorway at one person per cell per
 tick. A run ends when the room is clear, when the tick budget runs out, or when
 nothing has moved for 25 ticks.
+
+### Simulation API
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `POST` | `/api/simulations`      | Run a saved venue; returns summary and trace |
+| `GET`  | `/api/simulations/{id}` | Fetch a stored run, trace included |
+| `GET`  | `/api/simulations`      | List runs, newest first; `?venue_id=` to filter |
+
+Runs happen inline — at the configured limits a worst-case run takes under a
+second. Each stores the venue as it was at run time, so a result keeps meaning
+its own layout after the venue is edited.
 
 A venue can also be checked for whether it is *usable* — has exits, has a crowd, and
 the crowd can reach a way out:
