@@ -6,13 +6,15 @@
     PUT    /api/venues/<id>   replace
     DELETE /api/venues/<id>   remove
 
-`/validate` arrives on Day 5, once the engine can answer questions about
-reachability rather than just shape.
+    POST   /api/venues/validate    layout report for an unsaved venue
+    GET    /api/venues/<id>/validate layout report for a saved one
 """
 
 from flask import Blueprint, jsonify, request, url_for
 
 from ..db import repository
+from ..engine.grid import Grid
+from ..engine.layout import inspect
 from .errors import NotFoundError, ValidationError
 from .schemas import validate_venue
 
@@ -50,6 +52,24 @@ def create_venue():
     response.status_code = 201
     response.headers["Location"] = url_for("venues.get_venue", venue_id=venue["id"])
     return response
+
+
+@bp.post("/validate")
+def validate_unsaved_venue():
+    """Report on a venue the editor has not saved yet.
+
+    A malformed payload is still a 422; a well-formed venue that cannot be
+    evacuated is a 200 with `ok: false`, because there is nothing wrong with
+    the request — only with the layout.
+    """
+    fields = validate_venue(_json_body())
+    return jsonify(inspect(Grid(fields["width"], fields["height"], fields["cells"])))
+
+
+@bp.get("/<int:venue_id>/validate")
+def validate_saved_venue(venue_id: int):
+    venue = _venue_or_404(venue_id)
+    return jsonify(inspect(Grid.from_venue(venue)))
 
 
 @bp.get("/<int:venue_id>")

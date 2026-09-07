@@ -199,3 +199,45 @@ def test_json_array_body_is_rejected(client):
 def test_nothing_is_stored_when_validation_fails(client):
     client.post("/api/venues", json={"name": "Bad"})
     assert client.get("/api/venues").get_json() == []
+
+
+# Layout validation ----------------------------------------------------------
+
+
+def test_validate_reports_a_usable_venue(client, room):
+    response = client.post("/api/venues/validate", json=room)
+    assert response.status_code == 200
+    report = response.get_json()
+    assert report["ok"] is True
+    assert report["total_exit_width"] == 1
+    assert report["exits"][0]["width"] == 1
+
+
+def test_validate_reports_a_sealed_room(client, ascii_grid):
+    sealed = ascii_grid(
+        """
+        ######
+        #S...#
+        #....#
+        #....#
+        ######
+        """
+    )
+    report = client.post("/api/venues/validate", json=sealed).get_json()
+    assert report["ok"] is False
+    assert report["problems"][0]["code"] == "NO_EXIT"
+
+
+def test_validate_still_rejects_a_malformed_payload(client, room):
+    response = client.post("/api/venues/validate", json={**room, "cells": "123"})
+    assert response.status_code == 422
+
+
+def test_validate_a_saved_venue_by_id(client, room):
+    venue_id = _create(client, room).get_json()["id"]
+    report = client.get(f"/api/venues/{venue_id}/validate").get_json()
+    assert report["ok"] is True
+
+
+def test_validate_missing_venue_is_404(client):
+    assert client.get("/api/venues/999/validate").status_code == 404

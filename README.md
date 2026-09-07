@@ -61,13 +61,24 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. **Week 1 complete** (day 4 of 20). Deployed at
+Four-week build, one developer. Day 5 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
 app factory, config, schema applied on boot, a shared error shape, the full
 venue API with server-side validation, and the editor canvas with brush and
 rectangle tools, drag painting, resize and undo/redo.
+
+The engine's foundations are in: a server-side grid model that groups adjacent
+exit cells into doorways, multi-source BFS distance fields, and deterministic
+A* that accepts a cost function so congestion can steer routes later. A venue
+can also be checked for whether it is *usable* — has exits, has a crowd, and
+the crowd can reach a way out:
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `POST` | `/api/venues/validate`      | Layout report for an unsaved venue |
+| `GET`  | `/api/venues/{id}/validate` | Layout report for a saved one |
 
 ### Editor
 
