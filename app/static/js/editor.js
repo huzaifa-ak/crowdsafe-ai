@@ -5,11 +5,13 @@
  * so history is just an array of previous grids — no snapshotting logic, no
  * risk of an entry mutating after it was recorded.
  *
- * Saving is wired up on Day 4; this module deliberately never talks to the API.
+ * Saving sends the whole venue — name, dimensions and the cell string — because
+ * the API replaces a venue wholesale. There is no partial update to get wrong.
  */
 
 import { CELL, CELL_COLORS, CELL_NAMES, Grid, linePoints, rectanglePoints } from './grid.js';
 import { GridCanvas } from './canvas.js';
+import { api } from './api.js';
 
 const HISTORY_LIMIT = 60;
 
@@ -40,11 +42,17 @@ class Editor {
     this.stroke = null;
     this.hover = null;
 
+    /* null until the first successful save, which is what decides POST vs PUT. */
+    this.venueId = root.dataset.venueId ? Number(root.dataset.venueId) : null;
+    this.dirty = false;
+    this.saving = false;
+
     this.#bindPalette();
     this.#bindTools();
     this.#bindCanvas();
     this.#bindHistory();
     this.#bindSize();
+    this.#bindSave();
 
     window.addEventListener('resize', () => this.#refit());
     this.#refit();
@@ -98,9 +106,103 @@ class Editor {
   }
 
   #afterChange() {
+    this.#markDirty();
     this.#updateCounts();
     this.#updateHistoryButtons();
     this.draw();
+  }
+
+  /* Saving -------------------------------------------------------------- */
+
+  #bindSave() {
+    this.nameInput = this.root.querySelector('#venue-name');
+    this.saveButton = this.root.querySelector('#save');
+    this.statusText = this.root.querySelector('#save-status');
+    this.errorList = this.root.querySelector('#save-errors');
+
+    this.saveButton.addEventListener('click', () => this.save());
+    this.nameInput.addEventListener('input', () => this.#markDirty());
+
+    window.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        this.save();
+      }
+    });
+
+    /* The browser shows its own wording here; all we control is whether to ask.
+     * Only ever ask when there is genuinely unsaved work. */
+    window.addEventListener('beforeunload', (event) => {
+      if (!this.dirty) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+
+    this.#setStatus(this.venueId ? 'Saved' : 'Not saved yet');
+  }
+
+  async save() {
+    if (this.saving) return;
+
+    const name = this.nameInput.value.trim();
+    const venue = {
+      name,
+      width: this.grid.width,
+      height: this.grid.height,
+      cells: this.grid.toJSON().cells,
+    };
+
+    this.saving = true;
+    this.saveButton.disabled = true;
+    this.#setStatus('Saving…');
+    this.#showErrors([]);
+
+    try {
+      const saved = this.venueId
+        ? await api.updateVenue(this.venueId, venue)
+        : await api.createVenue(venue);
+
+      const isNew = this.venueId === null;
+      this.venueId = saved.id;
+      this.nameInput.value = saved.name;
+      this.dirty = false;
+      this.#setStatus('Saved');
+
+      /* Move the address to the venue's own URL so a refresh reopens what was
+       * just saved instead of dropping the person on a blank plan. */
+      if (isNew) window.history.replaceState({}, '', `/editor/${saved.id}`);
+    } catch (error) {
+      this.#setStatus(error.message);
+      this.#showErrors(error.details || []);
+      this.nameInput.classList.toggle('field-invalid', error.forField
+        ? error.forField('name').length > 0
+        : false);
+    } finally {
+      this.saving = false;
+      this.saveButton.disabled = false;
+    }
+  }
+
+  #markDirty() {
+    if (this.dirty) return;
+    this.dirty = true;
+    this.#setStatus('Unsaved changes');
+  }
+
+  #setStatus(text) {
+    if (this.statusText) this.statusText.textContent = text;
+  }
+
+  #showErrors(details) {
+    if (!this.errorList) return;
+    this.errorList.replaceChildren();
+    this.errorList.hidden = details.length === 0;
+    if (!details.length) this.nameInput.classList.remove('field-invalid');
+    for (const detail of details) {
+      const item = document.createElement('li');
+      item.textContent = detail.message;
+      this.errorList.append(item);
+    }
   }
 
   /* Wiring -------------------------------------------------------------- */

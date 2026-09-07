@@ -12,9 +12,21 @@
 <div id="editor"
      data-width="{{ venue.width }}"
      data-height="{{ venue.height }}"
+     {% if venue.id %}data-venue-id="{{ venue.id }}"{% endif %}
      {% if venue.cells %}data-cells="{{ venue.cells }}"{% endif %}>
 
   <aside class="tool-rail">
+    <section class="rail-group">
+      <h2 class="rail-heading">Venue</h2>
+      <input type="text" id="venue-name" maxlength="100" placeholder="Name this venue"
+             value="{{ venue.name or '' }}">
+      <div class="tool-row">
+        <button type="button" class="action action-primary" id="save">Save</button>
+      </div>
+      <p class="rail-note" id="save-status"></p>
+      <ul class="error-list" id="save-errors" hidden></ul>
+    </section>
+
     <section class="rail-group">
       <h2 class="rail-heading">Draw</h2>
       <div class="palette">

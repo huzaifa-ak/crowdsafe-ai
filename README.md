@@ -61,14 +61,13 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 3 of 20 complete. Deployed at
+Four-week build, one developer. **Week 1 complete** (day 4 of 20). Deployed at
 https://crowdsafe-ai.onrender.com.
 
-Done: app factory, config, schema applied on boot, shared error shape,
-dashboard, test harness, the full venue API — create, read, replace and delete
-with server-side validation — and the editor canvas: brush and rectangle tools,
-drag painting, resize, and undo/redo. The editor does not save yet; that is
-Day 4.
+A venue can be drawn, named, saved, reopened and edited again. Behind that:
+app factory, config, schema applied on boot, a shared error shape, the full
+venue API with server-side validation, and the editor canvas with brush and
+rectangle tools, drag painting, resize and undo/redo.
 
 ### Editor
 
@@ -99,7 +98,7 @@ can show all of them in one pass:
 
 | Week | Target |
 |------|--------|
-| 1 | Create, edit, save and reopen a venue; validation |
+| 1 | Create, edit, save and reopen a venue; validation — **done** |
 | 2 | Agents navigate obstacles to exits, live and from saved runs |
 | 3 | Congestion identified and explained |
 | 4 | Comparison, examples, docs, deployment |

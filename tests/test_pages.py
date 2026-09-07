@@ -25,3 +25,40 @@ def test_editor_loads_its_module(client):
 
 def test_dashboard_links_to_the_editor(client):
     assert '/editor' in client.get("/").data.decode()
+
+
+def _create_venue(client, name="Main hall"):
+    return client.post(
+        "/api/venues",
+        json={"name": name, "width": 6, "height": 5,
+              "cells": "111111" "150041" "100001" "100001" "111111"},
+    ).get_json()
+
+
+def test_editor_for_an_existing_venue_embeds_its_grid(client):
+    venue = _create_venue(client)
+    body = client.get(f"/editor/{venue['id']}").data.decode()
+    assert f'data-venue-id="{venue["id"]}"' in body
+    assert f'data-cells="{venue["cells"]}"' in body
+    assert 'value="Main hall"' in body
+
+
+def test_editor_for_a_missing_venue_is_404(client):
+    assert client.get("/editor/999").status_code == 404
+
+
+def test_blank_editor_has_no_venue_id(client):
+    body = client.get("/editor").data.decode()
+    assert "data-venue-id" not in body
+
+
+def test_dashboard_open_link_points_at_the_venue(client):
+    venue = _create_venue(client)
+    assert f'/editor/{venue["id"]}' in client.get("/").data.decode()
+
+
+def test_editor_has_save_controls(client):
+    body = client.get("/editor").data.decode()
+    assert 'id="venue-name"' in body
+    assert 'id="save"' in body
+    assert 'id="save-errors"' in body

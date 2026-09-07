@@ -3,7 +3,7 @@
 Editor, simulate, results and compare pages are added on their scheduled days.
 """
 
-from flask import Blueprint, render_template
+from flask import Blueprint, abort, render_template
 
 from .cells import CELL_NAMES, PALETTE_ORDER
 from .db import repository
@@ -26,6 +26,17 @@ def dashboard():
 
 @bp.get("/editor")
 def new_editor():
-    """A blank plan. Saving is wired up on Day 4."""
-    venue = {"width": DEFAULT_WIDTH, "height": DEFAULT_HEIGHT, "cells": None}
+    """A blank plan. It has no id until the first save."""
+    venue = {"id": None, "name": "", "width": DEFAULT_WIDTH, "height": DEFAULT_HEIGHT,
+             "cells": None}
+    return render_template("editor.html", venue=venue, palette=_palette())
+
+
+@bp.get("/editor/<int:venue_id>")
+def edit_venue(venue_id: int):
+    """An existing venue. The grid is rendered into the page rather than fetched,
+    so the plan is on screen in one round trip instead of two."""
+    venue = repository.get_venue(venue_id)
+    if venue is None:
+        abort(404)
     return render_template("editor.html", venue=venue, palette=_palette())

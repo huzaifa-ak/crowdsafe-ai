@@ -208,9 +208,9 @@ h1 {
   --cell-floor:    #ffffff;
   --cell-wall:     #14202b;
   --cell-barrier:  #9aa6b0;
-  --cell-entrance: #6d4bb0;
+  --cell-entrance: #0f8b8d;
   --cell-exit:     #007a45;
-  --cell-spawn:    #dce6f7;
+  --cell-spawn:    #5b6ee1;
 }
 
 .editor-shell {
@@ -342,4 +342,23 @@ h1 {
   .editor-shell { grid-template-columns: minmax(0, 1fr); height: auto; }
   .tool-rail { border-right: 0; border-bottom: 1px solid var(--rule); }
   .canvas-surface { height: 60vh; }
+}
+
+#venue-name {
+  width: 100%;
+  padding: calc(var(--step) * 0.75) var(--step);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+#venue-name.field-invalid { border-color: var(--alert); }
+
+.error-list {
+  margin: 0;
+  padding-left: calc(var(--step) * 2);
+  color: var(--alert);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
