@@ -61,9 +61,33 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 1 of 20 complete: app factory, config,
-schema applied on boot, error shape, `GET /api/venues`, dashboard shell, test
-harness.
+Four-week build, one developer. Day 2 of 20 complete. Deployed at
+https://crowdsafe-ai.onrender.com.
+
+Done: app factory, config, schema applied on boot, shared error shape,
+dashboard shell, test harness, and the full venue API — create, read, replace
+and delete with server-side validation of names, dimensions and cell strings.
+
+### Venue API
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET`    | `/api/venues`      | Listing, without cell data |
+| `POST`   | `/api/venues`      | 201 with a `Location` header |
+| `GET`    | `/api/venues/{id}` | Full venue including `cells` |
+| `PUT`    | `/api/venues/{id}` | Replaces every field |
+| `DELETE` | `/api/venues/{id}` | 204 |
+
+A venue's grid is one flat string of digits, row-major, one per cell:
+`0` floor, `1` wall, `2` barrier, `3` entrance, `4` exit, `5` spawn.
+
+Validation failures return 422 and list every problem at once, so the editor
+can show all of them in one pass:
+
+```json
+{"error": {"code": "VALIDATION", "message": "This venue could not be saved.",
+           "details": [{"field": "width", "message": "width must be between 5 and 80"}]}}
+```
 
 | Week | Target |
 |------|--------|

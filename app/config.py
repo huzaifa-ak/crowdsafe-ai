@@ -48,7 +48,6 @@ class Config:
     DEFAULT_SEED = 42
 
     MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # 1 MB request body cap
-    JSON_SORT_KEYS = False
 
 
 class TestConfig(Config):

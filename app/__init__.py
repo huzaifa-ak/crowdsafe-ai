@@ -18,6 +18,7 @@ def create_app(config_object=Config, **overrides) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_object)
     app.config.update(overrides)
+    app.json.sort_keys = False  # keep id/name first in responses, not alphabetical
 
     from . import db
     from .api import errors, venues
