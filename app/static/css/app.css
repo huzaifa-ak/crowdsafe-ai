@@ -1,0 +1,201 @@
+/* CrowdSafe AI — design tokens and shell styling.
+   Palette borrows from egress drawings: plan paper, blueprint ink, and the
+   green of exit signage as the only accent. Warm colours are reserved for the
+   density scale so they always mean "crowded" and never "decorative". */
+
+:root {
+  --sheet:      #fbfaf7;
+  --panel:      #ffffff;
+  --ink:        #14202b;
+  --ink-soft:   #5c6b78;
+  --rule:       #d9dfe3;
+  --rule-faint: #e8ecee;
+  --exit:       #007a45;
+  --exit-dark:  #005c34;
+  --alert:      #b3261e;
+
+  --step: 8px;
+  --measure: 62ch;
+  --radius: 4px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.numeric, .venue-table td.numeric { font-variant-numeric: tabular-nums; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+a { color: var(--exit-dark); }
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--exit);
+  outline-offset: 2px;
+}
+
+/* Masthead ---------------------------------------------------------------- */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--step) * 2);
+  padding: calc(var(--step) * 1.5) calc(var(--step) * 3);
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--step) * 1.25);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* A doorway: two jambs and a gap, the thing the whole app is about. */
+.wordmark-mark {
+  width: 14px;
+  height: 16px;
+  border: 2px solid var(--exit);
+  border-bottom-color: transparent;
+  border-radius: 1px;
+}
+
+.masthead-nav { display: flex; gap: var(--step); }
+
+/* Actions ----------------------------------------------------------------- */
+
+.action {
+  display: inline-block;
+  padding: calc(var(--step) * 0.75) calc(var(--step) * 1.75);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.925rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.action:hover { border-color: var(--ink-soft); }
+
+.action-primary {
+  background: var(--exit);
+  border-color: var(--exit);
+  color: #fff;
+}
+
+.action-primary:hover { background: var(--exit-dark); border-color: var(--exit-dark); }
+
+/* Sheet ------------------------------------------------------------------- */
+
+.sheet {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: calc(var(--step) * 5) calc(var(--step) * 3) calc(var(--step) * 8);
+}
+
+h1 {
+  margin: 0 0 calc(var(--step) * 1);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  max-width: var(--measure);
+  margin: 0 0 calc(var(--step) * 4);
+  color: var(--ink-soft);
+}
+
+/* Venue table ------------------------------------------------------------- */
+
+.venue-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.venue-table th {
+  padding: 0 calc(var(--step) * 1.5) var(--step) 0;
+  border-bottom: 1px solid var(--rule);
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  text-align: left;
+}
+
+.venue-table th.numeric, .venue-table td.numeric { text-align: right; }
+
+.venue-table td {
+  padding: calc(var(--step) * 1.5) calc(var(--step) * 1.5) calc(var(--step) * 1.5) 0;
+  border-bottom: 1px solid var(--rule-faint);
+  vertical-align: baseline;
+}
+
+.venue-name { font-weight: 500; }
+.row-actions { text-align: right; }
+
+/* Empty state: a sheet of 1 m grid paper -------------------------------- */
+
+.plan-field {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 340px;
+  padding: calc(var(--step) * 4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background-color: var(--panel);
+  background-image:
+    linear-gradient(to right, var(--rule-faint) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rule-faint) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.plan-field-copy {
+  max-width: 44ch;
+  padding: calc(var(--step) * 3);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.plan-field-copy h2 {
+  margin: 0 0 var(--step);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.plan-field-copy p {
+  margin: 0 0 calc(var(--step) * 2.5);
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .sheet { padding: calc(var(--step) * 3) calc(var(--step) * 2) calc(var(--step) * 6); }
+  .masthead { padding: var(--step) calc(var(--step) * 2); }
+  .venue-table { font-size: 0.9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: crowdsafe-ai
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn "app:create_app()" --workers 2 --timeout 60 --bind 0.0.0.0:$PORT
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: SECRET_KEY
+        generateValue: true
+      # Free-tier disk is ephemeral: this database is rebuilt on every deploy,
+      # which is why example venues are seeded on boot (Day 17).
+      - key: DATABASE_PATH
+        value: /tmp/crowdsafe.db

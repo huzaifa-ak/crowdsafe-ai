@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block nav %}
+  <a class="action" href="#">New venue</a>
+{% endblock %}
+
+{% block content %}
+  <h1>Venues</h1>
+  <p class="lede">
+    Draw a floor plan, run an evacuation across it, and see where the crowd
+    backs up before it matters.
+  </p>
+
+  {% if venues %}
+    <table class="venue-table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col" class="numeric">Size</th>
+          <th scope="col">Last edited</th>
+          <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for venue in venues %}
+          <tr>
+            <td class="venue-name">{{ venue.name }}</td>
+            <td class="numeric">{{ venue.width }} × {{ venue.height }} m</td>
+            <td>{{ venue.updated_at }}</td>
+            <td class="row-actions"><a href="#">Open</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="plan-field">
+      <div class="plan-field-copy">
+        <h2>Nothing drawn yet</h2>
+        <p>
+          Start with a room: walls around the edge, a spawn area for the crowd,
+          and at least one exit. Every cell is one square metre.
+        </p>
+        <a class="action action-primary" href="#">New venue</a>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
