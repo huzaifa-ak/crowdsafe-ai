@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 5 of 20 complete. Deployed at
+Four-week build, one developer. Day 6 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -71,8 +71,13 @@ rectangle tools, drag painting, resize and undo/redo.
 
 The engine's foundations are in: a server-side grid model that groups adjacent
 exit cells into doorways, multi-source BFS distance fields, and deterministic
-A* that accepts a cost function so congestion can steer routes later. A venue
-can also be checked for whether it is *usable* — has exits, has a crowd, and
+A* that accepts a cost function so congestion can steer routes later. The tick loop runs: a seeded crowd spawns across the spawn area, routes to its
+nearest exit, and walks out — slowed by the people ahead of it, capped at three
+per square metre, and admitted through each doorway at one person per cell per
+tick. A run ends when the room is clear, when the tick budget runs out, or when
+nothing has moved for 25 ticks.
+
+A venue can also be checked for whether it is *usable* — has exits, has a crowd, and
 the crowd can reach a way out:
 
 | Method | Path | Notes |
