@@ -30,9 +30,9 @@ export const CELL_COLORS = {
   [CELL.FLOOR]: '#ffffff',
   [CELL.WALL]: '#14202b',
   [CELL.BARRIER]: '#9aa6b0',
-  [CELL.ENTRANCE]: '#0f8b8d',
+  [CELL.ENTRANCE]: '#6d4bb0',
   [CELL.EXIT]: '#007a45',
-  [CELL.SPAWN]: '#5b6ee1',
+  [CELL.SPAWN]: '#dce6f7',
 };
 
 export class Grid {

@@ -208,9 +208,9 @@ h1 {
   --cell-floor:    #ffffff;
   --cell-wall:     #14202b;
   --cell-barrier:  #9aa6b0;
-  --cell-entrance: #0f8b8d;
+  --cell-entrance: #6d4bb0;
   --cell-exit:     #007a45;
-  --cell-spawn:    #5b6ee1;
+  --cell-spawn:    #dce6f7;
 }
 
 .editor-shell {
