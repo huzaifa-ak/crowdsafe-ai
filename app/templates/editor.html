@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Editor · CrowdSafe AI{% endblock %}
+
+{% block main_class %}editor-shell{% endblock %}
+
+{% block nav %}
+  <a class="action" href="{{ url_for('pages.dashboard') }}">Back to venues</a>
+{% endblock %}
+
+{% block content %}
+<div id="editor"
+     data-width="{{ venue.width }}"
+     data-height="{{ venue.height }}"
+     {% if venue.cells %}data-cells="{{ venue.cells }}"{% endif %}>
+
+  <aside class="tool-rail">
+    <section class="rail-group">
+      <h2 class="rail-heading">Draw</h2>
+      <div class="palette">
+        {% for code, label in palette %}
+          <button type="button" class="swatch" data-cell="{{ code }}" aria-pressed="false">
+            <span class="swatch-chip" data-swatch="{{ code }}"></span>
+            <span class="swatch-label">{{ label }}</span>
+            <span class="swatch-count numeric" data-count="{{ code }}">0</span>
+          </button>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="rail-group">
+      <h2 class="rail-heading">Tool</h2>
+      <div class="tool-row">
+        <button type="button" class="action" data-tool="brush" aria-pressed="true">Brush</button>
+        <button type="button" class="action" data-tool="rectangle" aria-pressed="false">Rectangle</button>
+      </div>
+      <div class="tool-row">
+        <button type="button" class="action" id="undo">Undo</button>
+        <button type="button" class="action" id="redo">Redo</button>
+      </div>
+    </section>
+
+    <section class="rail-group">
+      <h2 class="rail-heading">Size</h2>
+      <div class="size-row">
+        <label for="venue-width">Width</label>
+        <input type="number" id="venue-width" min="5" max="80" class="numeric">
+      </div>
+      <div class="size-row">
+        <label for="venue-height">Height</label>
+        <input type="number" id="venue-height" min="5" max="60" class="numeric">
+      </div>
+      <p class="rail-note">
+        Growing the plan adds floor and keeps the outer edge walled. Shrinking
+        it drops whatever falls outside.
+      </p>
+    </section>
+
+    <p class="rail-hint">
+      Number keys pick a cell type. B brushes, R draws rectangles, right-click
+      erases back to floor, Ctrl+Z steps back.
+    </p>
+  </aside>
+
+  <div class="canvas-surface">
+    <canvas id="grid-canvas"></canvas>
+    <div class="canvas-status">
+      <span id="venue-area" class="numeric"></span>
+      <span id="cursor-readout" class="numeric"></span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/editor.js') }}"></script>
+{% endblock %}

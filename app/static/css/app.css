@@ -199,3 +199,147 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Editor ------------------------------------------------------------------ */
+
+/* Cell colours are duplicated in static/js/grid.js because canvas cannot read
+   CSS variables; these drive the palette swatches only. */
+:root {
+  --cell-floor:    #ffffff;
+  --cell-wall:     #14202b;
+  --cell-barrier:  #9aa6b0;
+  --cell-entrance: #0f8b8d;
+  --cell-exit:     #007a45;
+  --cell-spawn:    #5b6ee1;
+}
+
+.editor-shell {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  height: calc(100vh - 61px);
+}
+
+#editor {
+  display: contents;
+}
+
+.tool-rail {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--step) * 3);
+  padding: calc(var(--step) * 3);
+  overflow-y: auto;
+  border-right: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.rail-group { display: flex; flex-direction: column; gap: var(--step); }
+
+.rail-heading {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.rail-note, .rail-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.rail-hint { margin-top: auto; padding-top: calc(var(--step) * 2); }
+
+.palette { display: flex; flex-direction: column; gap: 2px; }
+
+.swatch {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: calc(var(--step) * 1.25);
+  padding: calc(var(--step) * 0.75);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.swatch:hover { background: var(--sheet); }
+
+.swatch[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--sheet);
+  font-weight: 500;
+}
+
+.swatch-chip {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+
+.swatch-chip[data-swatch="0"] { background: var(--cell-floor); }
+.swatch-chip[data-swatch="1"] { background: var(--cell-wall); }
+.swatch-chip[data-swatch="2"] { background: var(--cell-barrier); }
+.swatch-chip[data-swatch="3"] { background: var(--cell-entrance); }
+.swatch-chip[data-swatch="4"] { background: var(--cell-exit); }
+.swatch-chip[data-swatch="5"] { background: var(--cell-spawn); }
+
+.swatch-count { color: var(--ink-soft); font-size: 0.8rem; }
+
+.tool-row { display: flex; gap: var(--step); }
+.tool-row .action { flex: 1; padding-inline: var(--step); text-align: center; cursor: pointer; }
+.tool-row .action[aria-pressed="true"] { border-color: var(--ink); font-weight: 500; }
+.tool-row .action:disabled { opacity: 0.4; cursor: default; }
+.tool-row .action:disabled:hover { border-color: var(--rule); }
+
+.size-row {
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  align-items: center;
+  gap: var(--step);
+  font-size: 0.9rem;
+}
+
+.size-row input {
+  padding: calc(var(--step) * 0.5) var(--step);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.canvas-surface {
+  position: relative;
+  min-width: 0;
+  background: var(--sheet);
+}
+
+#grid-canvas { display: block; touch-action: none; cursor: crosshair; }
+
+.canvas-status {
+  position: absolute;
+  right: calc(var(--step) * 2);
+  bottom: calc(var(--step) * 2);
+  display: flex;
+  gap: calc(var(--step) * 2);
+  padding: calc(var(--step) * 0.75) calc(var(--step) * 1.5);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 720px) {
+  .editor-shell { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .tool-rail { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .canvas-surface { height: 60vh; }
+}

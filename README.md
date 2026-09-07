@@ -61,12 +61,20 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 2 of 20 complete. Deployed at
+Four-week build, one developer. Day 3 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 Done: app factory, config, schema applied on boot, shared error shape,
-dashboard shell, test harness, and the full venue API — create, read, replace
-and delete with server-side validation of names, dimensions and cell strings.
+dashboard, test harness, the full venue API — create, read, replace and delete
+with server-side validation — and the editor canvas: brush and rectangle tools,
+drag painting, resize, and undo/redo. The editor does not save yet; that is
+Day 4.
+
+### Editor
+
+Brush or rectangle, painting the cell type picked in the palette. Number keys
+select a cell type, B and R switch tool, right-click erases back to floor, and
+Ctrl+Z / Ctrl+Shift+Z step through history. A whole drag is one undo entry.
 
 ### Venue API
 

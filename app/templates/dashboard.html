@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block nav %}
-  <a class="action" href="#">New venue</a>
+  <a class="action" href="{{ url_for('pages.new_editor') }}">New venue</a>
 {% endblock %}
 
 {% block content %}
@@ -40,7 +40,7 @@
           Start with a room: walls around the edge, a spawn area for the crowd,
           and at least one exit. Every cell is one square metre.
         </p>
-        <a class="action action-primary" href="#">New venue</a>
+        <a class="action action-primary" href="{{ url_for('pages.new_editor') }}">New venue</a>
       </div>
     </div>
   {% endif %}
