@@ -32,7 +32,7 @@ export const CELL_COLORS = {
   [CELL.BARRIER]: '#9aa6b0',
   [CELL.ENTRANCE]: '#6d4bb0',
   [CELL.EXIT]: '#007a45',
-  [CELL.SPAWN]: '#dce6f7',
+  [CELL.SPAWN]: '#5b6ee1',
 };
 
 export class Grid {
