@@ -15,6 +15,7 @@ import random
 from dataclasses import dataclass, field
 
 from .agents import Agent, assign_exits, exit_distance_fields, plan_routes, spawn_agents
+from .density import DensityAccumulator
 from .grid import Grid
 
 # How much a crowded destination slows an approach. An empty cell costs nothing;
@@ -63,6 +64,7 @@ class SimulationResult:
     exit_usage: dict[int, int]
     exit_ticks: list[int | None]     # per agent, in id order
     trace: list[list[int]] = field(default_factory=list)
+    density: dict = field(default_factory=dict)
 
     @property
     def clearing_ticks(self) -> int | None:
@@ -92,6 +94,14 @@ class Simulation:
         self.occupancy = [0] * (grid.width * grid.height)
         for agent in self.agents:
             self.occupancy[self._index(agent.x, agent.y)] += 1
+
+        self.density = DensityAccumulator(grid)
+        # Indices of cells holding somebody. Maintained as agents move rather
+        # than rebuilt each tick, so the density accumulator never has to scan
+        # the grid to find out where people are.
+        self.occupied: set[int] = {
+            self._index(a.x, a.y) for a in self.agents
+        }
 
         self.exit_cells = {cell for exit_ in grid.exits for cell in exit_.cells}
         self.exit_usage = {exit_.id: 0 for exit_ in grid.exits}
@@ -134,7 +144,7 @@ class Simulation:
 
             self.tick += 1
             moved = self.step()
-            self._record_trace()
+            self._record_tick()
 
             if moved:
                 self._quiet_ticks = 0
@@ -159,6 +169,7 @@ class Simulation:
             exit_usage=dict(self.exit_usage),
             exit_ticks=[a.tick_exited for a in self.agents],
             trace=self.trace,
+            density=self.density.as_dict(),
         )
 
     def step(self) -> bool:
@@ -201,14 +212,14 @@ class Simulation:
         return something_happened
 
     def _move(self, agent: Agent, target) -> None:
-        self.occupancy[self._index(agent.x, agent.y)] -= 1
-        self.occupancy[self._index(*target)] += 1
+        self._set_occupancy(self._index(agent.x, agent.y), -1)
+        self._set_occupancy(self._index(*target), 1)
         agent.x, agent.y = target
         agent.path_index += 1
         agent.credit -= 1.0
 
     def _leave(self, agent: Agent, target) -> None:
-        self.occupancy[self._index(agent.x, agent.y)] -= 1
+        self._set_occupancy(self._index(agent.x, agent.y), -1)
         agent.x, agent.y = target
         agent.credit -= 1.0
         agent.tick_exited = self.tick
@@ -217,6 +228,18 @@ class Simulation:
         exit_ = self.grid.exit_for_cell(target)
         if exit_ is not None:
             self.exit_usage[exit_.id] += 1
+
+    def _set_occupancy(self, index: int, delta: int) -> None:
+        value = self.occupancy[index] + delta
+        self.occupancy[index] = value
+        if value:
+            self.occupied.add(index)
+        else:
+            self.occupied.discard(index)
+
+    def _record_tick(self) -> None:
+        self._record_trace()
+        self.density.record(self.occupancy, list(self.occupied))
 
     def _record_trace(self) -> None:
         """One flat list of coordinates per tick.

@@ -18,6 +18,7 @@ from ..db import repository
 from ..engine.grid import Grid
 from ..engine.layout import inspect
 from ..engine.simulation import SimulationConfig, simulate
+from ..engine import trace as trace_store
 from .errors import NotFoundError, ValidationError
 from .schemas import validate_simulation_config
 
@@ -104,6 +105,9 @@ def run_simulation():
     result = simulate(grid, SimulationConfig(**settings))
     summary = _summarise(result, grid, report, settings)
 
+    blob = trace_store.encode(result.trace)
+    summary["trace"] = trace_store.summarise(result.trace, blob)
+
     simulation_id = repository.create_simulation(
         venue_id=venue["id"],
         venue_snapshot=json.dumps({
@@ -116,10 +120,12 @@ def run_simulation():
     repository.create_result(
         simulation_id=simulation_id,
         metrics_json=json.dumps(summary),
-        trace_blob=json.dumps(result.trace).encode("utf-8"),
+        heatmap_json=json.dumps(result.density),
+        trace_blob=blob,
     )
 
-    payload = _payload(simulation_id, venue, settings, summary, result.trace)
+    payload = _payload(simulation_id, venue, settings, summary, result.trace,
+                       density=result.density)
     response = jsonify(payload)
     response.status_code = 201
     response.headers["Location"] = url_for("simulations.get_simulation",
@@ -133,16 +139,22 @@ def get_simulation(simulation_id: int):
     if row is None:
         raise NotFoundError(f"No simulation with id {simulation_id}.")
 
-    trace = json.loads(row["trace_blob"].decode("utf-8")) if row["trace_blob"] else []
     snapshot = json.loads(row["venue_snapshot"])
     venue = {"id": row["venue_id"], **snapshot}
+
+    # Both are large. A caller that only wants the numbers can say so rather
+    # than pulling a few hundred kilobytes it will throw away.
+    want_trace = request.args.get("trace", "1") != "0"
+    want_density = request.args.get("density", "1") != "0"
+
     return jsonify(
         _payload(
             row["id"],
             venue,
             json.loads(row["config_json"]),
             json.loads(row["metrics_json"]) if row["metrics_json"] else {},
-            trace,
+            trace_store.decode(row["trace_blob"]) if want_trace else None,
+            density=json.loads(row["heatmap_json"]) if want_density and row["heatmap_json"] else None,
             created_at=row["created_at"],
         )
     )
@@ -166,7 +178,8 @@ def list_simulations():
 
 
 def _payload(simulation_id: int, venue: dict, settings: dict, summary: dict,
-             trace: list, created_at: str | None = None) -> dict:
+             trace: list | None, density: dict | None = None,
+             created_at: str | None = None) -> dict:
     payload = {
         "id": simulation_id,
         "venue_id": venue.get("id"),
@@ -179,8 +192,11 @@ def _payload(simulation_id: int, venue: dict, settings: dict, summary: dict,
             "height": venue.get("height"),
             "cells": venue.get("cells"),
         },
-        "trace": trace,
     }
+    if trace is not None:
+        payload["trace"] = trace
+    if density is not None:
+        payload["density"] = density
     if created_at:
         payload["created_at"] = created_at
     return payload

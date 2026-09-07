@@ -213,3 +213,40 @@ def test_settings_outside_the_limits_are_refused(client, venue_id, field, value)
 def test_entrances_are_exits_must_be_a_boolean(client, venue_id):
     response = run(client, venue_id, num_agents=20, entrances_are_exits="yes")
     assert response.status_code == 422
+
+
+# Trace storage and payload size ---------------------------------------------
+
+
+def test_the_run_reports_what_its_trace_cost(client, venue_id):
+    summary = run(client, venue_id, num_agents=30).get_json()["summary"]
+    assert summary["trace"]["stored_bytes"] < summary["trace"]["raw_bytes"]
+    assert summary["trace"]["ticks"] == summary["ticks"] + 1
+
+
+def test_a_stored_run_returns_its_density(client, venue_id):
+    created = run(client, venue_id, num_agents=30).get_json()
+    assert "density" in created
+    fetched = client.get(f"/api/simulations/{created['id']}").get_json()
+    assert fetched["density"] == created["density"]
+
+
+def test_density_can_be_left_out_of_the_response(client, venue_id):
+    created = run(client, venue_id, num_agents=30).get_json()
+    fetched = client.get(f"/api/simulations/{created['id']}?density=0").get_json()
+    assert "density" not in fetched
+    assert fetched["summary"] == created["summary"]
+
+
+def test_the_trace_can_be_left_out_of_the_response(client, venue_id):
+    created = run(client, venue_id, num_agents=30).get_json()
+    fetched = client.get(f"/api/simulations/{created['id']}?trace=0").get_json()
+    assert "trace" not in fetched
+
+
+def test_a_compressed_trace_still_replays_exactly(client, venue_id):
+    """Compression is only worth having if it is lossless. Compare the stored
+    run tick by tick against the one that was returned when it ran."""
+    created = run(client, venue_id, num_agents=30, seed=11).get_json()
+    fetched = client.get(f"/api/simulations/{created['id']}").get_json()
+    assert fetched["trace"] == created["trace"]

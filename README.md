@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 7 of 20 complete. Deployed at
+Four-week build, one developer. Day 8 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -88,6 +88,17 @@ nothing has moved for 25 ticks.
 Runs happen inline — at the configured limits a worst-case run takes under a
 second. Each stores the venue as it was at run time, so a result keeps meaning
 its own layout after the venue is edited.
+
+Add `?trace=0` or `?density=0` when fetching a run to leave the large parts out.
+
+Measured at the largest venue the API accepts (80 × 60, 300 people, one narrow
+door), against budgets asserted in the test suite:
+
+| | Measured | Budget |
+|---|---|---|
+| Run time | 0.8 s | 3 s |
+| Trace, raw | 260 KB | 2 MB |
+| Trace, stored | 40 KB | 256 KB |
 
 A venue can also be checked for whether it is *usable* — has exits, has a crowd, and
 the crowd can reach a way out:
