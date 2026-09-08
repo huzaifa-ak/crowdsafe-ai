@@ -58,6 +58,10 @@ def _summarise(result, grid: Grid, report: dict, settings: dict) -> dict:
         "clearing_ticks": clearing,
         "clearing_seconds": round(clearing * Config.SECONDS_PER_TICK, 1) if clearing else None,
         "exit_usage": {str(k): v for k, v in result.exit_usage.items()},
+        # How much rerouting the run needed, and how many searches that cost.
+        # A large gap between them means the route cache is doing its job.
+        "reroutes": result.reroutes,
+        "searches": result.searches,
         "exit_widths": {str(e.id): e.width for e in grid.exits},
         "free_flow_ticks": round(free_flow, 1) if free_flow else None,
         "time_ratio": round(clearing / free_flow, 2) if clearing and free_flow else None,

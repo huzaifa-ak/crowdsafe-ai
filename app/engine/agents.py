@@ -99,10 +99,15 @@ def assign_exits(grid: Grid, agents: list[Agent], fields: dict[int, dict[Point, 
     behaviour that produces the bottlenecks the tool exists to find. Default.
 
     `balanced` — people weigh the queue as well as the walk. Both terms are in
-    ticks, so they are directly comparable: walking distance divided by speed,
-    plus the wait implied by everyone already heading for that door. It models
-    a venue with marshals or clear signage, and running one layout both ways
-    shows what better crowd management alone would be worth.
+    ticks, so they are directly comparable, and they combine as a maximum
+    rather than a sum: you leave when you have both arrived and cleared the
+    queue, whichever happens later. Adding them would treat everyone assigned
+    to a door as already standing at it, which panics about queues that drain
+    long before most of the crowd gets there. This is the same reasoning as the
+    free-flow baseline in docs/decisions.md, correction 1.
+
+    It models a venue with marshals or clear signage, and running one layout
+    both ways shows what better crowd management alone would be worth.
 
     Assignment is greedy in agent-id order. That order is fixed and so the
     result is reproducible — which matters here, because under the balanced
@@ -120,9 +125,10 @@ def assign_exits(grid: Grid, agents: list[Agent], fields: dict[int, dict[Point, 
                 continue
             cost = distance / speed
             if balanced:
-                # Ticks the last person in this queue waits, given one
-                # admission per exit cell per tick.
-                cost += planned[exit_id] / widths[exit_id]
+                # Ticks until everyone already heading here has been admitted,
+                # at one per exit cell per tick. You leave at whichever comes
+                # later: your arrival, or the queue draining.
+                cost = max(cost, planned[exit_id] / widths[exit_id])
             if best_cost is None or cost < best_cost:
                 best_id, best_cost = exit_id, cost
         agent.exit_id = best_id

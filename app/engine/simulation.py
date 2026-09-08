@@ -212,8 +212,10 @@ class Simulation:
         """Estimated ticks to get out by each door: the walk, plus the wait.
 
         The wait is the number of people still heading for that door divided by
-        its width, which is exactly how long the last of them will take to get
-        through. Both terms are in ticks, so they add.
+        its width — how long until the last of them is through. It combines
+        with the walk as a maximum, not a sum: you leave once you have both
+        arrived and outlasted the queue. Adding them would treat a queue that
+        drains before you arrive as though you had to stand in it.
 
         Because the count updates the moment an agent switches, this
         self-limits: the first people to abandon a jammed door make the
@@ -229,7 +231,8 @@ class Simulation:
             distance = self.fields[exit_.id].get(agent.position)
             if distance is None:
                 continue
-            cost = distance / self.config.speed + self.heading_for[exit_.id] / exit_.width
+            cost = max(distance / self.config.speed,
+                       self.heading_for[exit_.id] / exit_.width)
             if exit_.id == current:
                 # Switching has to be clearly better, not marginally better.
                 # Without hysteresis two similar doors make people oscillate.

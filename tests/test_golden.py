@@ -46,6 +46,10 @@ CONFIG = {"num_agents": 60, "speed": 1.0, "cell_capacity": 3,
 # History of deliberate changes to this digest:
 #   Day 9 — rerouting added. Agents now leave a route they are stuck on, so
 #           the same venue evacuates differently and faster. Regenerated.
+#   Day 9 — exit-choice cost changed from walk + queue to max(walk, queue).
+#           The sum treated everyone assigned to a door as already standing at
+#           it, so it avoided queues that drain long before most of the crowd
+#           arrives. Regenerated.
 
 
 def _grid() -> Grid:

@@ -75,16 +75,28 @@ what an unsignposted crowd does and what exposes a lopsided layout. `balanced`
 adds the expected wait to the walk, modelling marshals or clear signage.
 Running one layout both ways measures what crowd management alone is worth.
 
-Measured on a hall with two equal doors and the crowd bunched at one end:
+Exit-choice cost combines the walk and the queue as a **maximum**, not a sum.
+An agent leaves once it has both arrived and outlasted the queue, whichever
+happens later. The first version added the two terms, which treats everyone
+assigned to a door as already standing at it — so it fled queues that drain
+long before most of the crowd arrives, and made `balanced` slower than
+`nearest` on any venue where walking dominates. This is the same reasoning as
+correction 1 above, applied to a different formula.
 
-| Model | Clearing ticks | Exit split |
+Measured on two venues that fail for different reasons:
+
+| Model | Lopsided hall (queue-bound) | Three spread doors (walk-bound) |
 |---|---|---|
-| nearest, no reroute | 127 | 120 / 0 |
-| nearest + reroute | 77 | 76 / 44 |
-| balanced | 72 | 62 / 58 |
+| nearest, no reroute | 127 | 48 |
+| nearest + reroute | 74 | 38 |
+| balanced, no reroute | 75 | 48 |
 
-The golden digest was regenerated for this change; the reason is recorded in
-`tests/test_golden.py`.
+The point of the second column is that `balanced` does no harm there. A model
+that helps when queues are the constraint and is neutral when they are not is
+the one worth shipping.
+
+The golden digest was regenerated twice for this day's work; both reasons are
+recorded in `tests/test_golden.py`.
 
 Open for Day 15: a single narrow exit currently trips the time, density,
 bottleneck and exit penalties at once, so a poor layout and a dangerous one can

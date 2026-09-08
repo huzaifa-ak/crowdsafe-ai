@@ -9,13 +9,13 @@
     "reroute": true
   },
   "status": "complete",
-  "ticks": 64,
-  "clearing_ticks": 64,
+  "ticks": 68,
+  "clearing_ticks": 68,
   "evacuated": 60,
   "stranded": 0,
   "exit_usage": {
-    "1": 5,
-    "2": 55
+    "1": 1,
+    "2": 59
   },
-  "trace_sha256": "3a4e6dc3830d699359cf214a90548b8876ebabfb006f7d71d00ae9c6f5d26ba8"
+  "trace_sha256": "457a02a36bcae10335357f7cd06a68fcd0d20bcc43e4052affbf365f1061eff6"
 }
