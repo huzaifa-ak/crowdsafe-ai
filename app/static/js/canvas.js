@@ -15,6 +15,12 @@ const MAX_CELL_PX = 28;
  * the door" — so the grid should make that readable without counting. */
 const MAJOR_EVERY = 5;
 
+// Agents are drawn near-black with a light ring so they read against both the
+// white floor and the periwinkle spawn blocks. Warm colours are deliberately
+// left alone — they belong to the density heatmap, which shares this canvas.
+const AGENT_FILL = '#1a2530';
+const AGENT_RING = 'rgba(255,255,255,0.85)';
+
 const LINE_MINOR = '#e8ecee';
 const LINE_MAJOR = '#c9d2d8';
 const PREVIEW_OUTLINE = '#14202b';
@@ -71,6 +77,7 @@ export class GridCanvas {
    * @param {Array<[number, number]>} overlay.preview cells a pending action would paint
    * @param {string} overlay.previewColor
    * @param {{x: number, y: number}|null} overlay.hover
+   * @param {number[]} overlay.agents flat [x, y, x, y, ...] for one tick
    */
   render(grid, overlay = {}) {
     const ctx = this.context;
@@ -98,6 +105,10 @@ export class GridCanvas {
       ctx.globalAlpha = 1;
     }
 
+    if (overlay.agents && overlay.agents.length) {
+      this.#drawAgents(overlay.agents);
+    }
+
     if (overlay.hover && grid.contains(overlay.hover.x, overlay.hover.y)) {
       ctx.strokeStyle = PREVIEW_OUTLINE;
       ctx.lineWidth = 2;
@@ -116,6 +127,60 @@ export class GridCanvas {
     ctx.strokeRect(0.5, 0.5, grid.width * size - 1, grid.height * size - 1);
 
     ctx.restore();
+  }
+
+  /**
+   * One dot per person. Several can share a cell, so they are nudged apart on
+   * a small ring — a single dot would make three people look like one, and the
+   * whole point of watching a run is seeing where the crowd thickens.
+   *
+   * Below about ten pixels a cell there is no room to separate them, so the
+   * cell is shaded by how many are in it instead.
+   */
+  #drawAgents(positions) {
+    const ctx = this.context;
+    const size = this.cellSize;
+
+    if (size < 10) {
+      const counts = new Map();
+      for (let i = 0; i < positions.length; i += 2) {
+        const key = `${positions[i]},${positions[i + 1]}`;
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      ctx.fillStyle = AGENT_FILL;
+      for (const [key, count] of counts) {
+        const [x, y] = key.split(',').map(Number);
+        ctx.globalAlpha = Math.min(1, 0.35 + count * 0.25);
+        ctx.fillRect(x * size, y * size, size, size);
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    const seen = new Map();
+    const radius = Math.max(2, size * 0.22);
+    const spread = size * 0.2;
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = AGENT_RING;
+    ctx.fillStyle = AGENT_FILL;
+
+    for (let i = 0; i < positions.length; i += 2) {
+      const x = positions[i];
+      const y = positions[i + 1];
+      const key = y * 4096 + x;
+      const index = seen.get(key) || 0;
+      seen.set(key, index + 1);
+
+      const angle = (index * 2 * Math.PI) / 3 - Math.PI / 2;
+      const cx = x * size + size / 2 + (index ? Math.cos(angle) * spread : 0);
+      const cy = y * size + size / 2 + (index ? Math.sin(angle) * spread : 0);
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
   }
 
   #drawRules(grid) {

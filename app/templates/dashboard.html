@@ -27,7 +27,10 @@
             <td class="venue-name">{{ venue.name }}</td>
             <td class="numeric">{{ venue.width }} × {{ venue.height }} m</td>
             <td>{{ venue.updated_at }}</td>
-            <td class="row-actions"><a href="{{ url_for('pages.edit_venue', venue_id=venue.id) }}">Open</a></td>
+            <td class="row-actions">
+              <a href="{{ url_for('pages.simulate_venue', venue_id=venue.id) }}">Run</a>
+              <a href="{{ url_for('pages.edit_venue', venue_id=venue.id) }}">Edit</a>
+            </td>
           </tr>
         {% endfor %}
       </tbody>

@@ -66,4 +66,9 @@ export const api = {
   createVenue: (venue) => request('POST', '/api/venues', venue),
   updateVenue: (id, venue) => request('PUT', `/api/venues/${id}`, venue),
   deleteVenue: (id) => request('DELETE', `/api/venues/${id}`),
+  validateVenue: (venue) => request('POST', '/api/venues/validate', venue),
+
+  runSimulation: (venueId, config) =>
+    request('POST', '/api/simulations', { venue_id: venueId, config }),
+  getSimulation: (id) => request('GET', `/api/simulations/${id}`),
 };

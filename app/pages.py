@@ -32,6 +32,14 @@ def new_editor():
     return render_template("editor.html", venue=venue, palette=_palette())
 
 
+@bp.get("/simulate/<int:venue_id>")
+def simulate_venue(venue_id: int):
+    venue = repository.get_venue(venue_id)
+    if venue is None:
+        abort(404)
+    return render_template("simulate.html", venue=venue)
+
+
 @bp.get("/editor/<int:venue_id>")
 def edit_venue(venue_id: int):
     """An existing venue. The grid is rendered into the page rather than fetched,

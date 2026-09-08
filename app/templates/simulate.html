@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ venue.name }} · CrowdSafe AI{% endblock %}
+
+{% block main_class %}editor-shell{% endblock %}
+
+{% block nav %}
+  <a class="action" href="{{ url_for('pages.edit_venue', venue_id=venue.id) }}">Edit plan</a>
+  <a class="action" href="{{ url_for('pages.dashboard') }}">Back to venues</a>
+{% endblock %}
+
+{% block content %}
+<div id="simulate"
+     data-venue-id="{{ venue.id }}"
+     data-width="{{ venue.width }}"
+     data-height="{{ venue.height }}"
+     data-cells="{{ venue.cells }}">
+
+  <aside class="tool-rail">
+    <section class="rail-group">
+      <h2 class="rail-heading">{{ venue.name }}</h2>
+      <p class="rail-note">{{ venue.width }} × {{ venue.height }} m</p>
+    </section>
+
+    <section class="rail-group">
+      <h2 class="rail-heading">Crowd</h2>
+      <div class="size-row">
+        <label for="num-agents">People</label>
+        <input type="number" id="num-agents" class="numeric" min="20" max="300" value="150">
+      </div>
+      <div class="size-row">
+        <label for="speed">Walking speed</label>
+        <input type="number" id="speed" class="numeric" min="0.5" max="1" step="0.1" value="1">
+      </div>
+      <div class="size-row">
+        <label for="cell-capacity">Per m²</label>
+        <input type="number" id="cell-capacity" class="numeric" min="1" max="5" value="3">
+      </div>
+    </section>
+
+    <section class="rail-group">
+      <h2 class="rail-heading">Behaviour</h2>
+      <div class="size-row">
+        <label for="routing">Exit choice</label>
+        <select id="routing">
+          <option value="nearest">Nearest</option>
+          <option value="balanced">Managed</option>
+        </select>
+      </div>
+      <label class="check-row">
+        <input type="checkbox" id="reroute" checked>
+        Go round jams
+      </label>
+      <p class="rail-note">
+        Nearest is an unsignposted crowd heading for the closest door. Managed
+        assumes marshals or clear signage spreading people between doors.
+      </p>
+    </section>
+
+    <section class="rail-group">
+      <h2 class="rail-heading">Run</h2>
+      <div class="size-row">
+        <label for="seed">Seed</label>
+        <input type="number" id="seed" class="numeric" min="0" value="42">
+      </div>
+      <div class="tool-row">
+        <button type="button" class="action action-primary" id="run">Run simulation</button>
+      </div>
+      <p class="rail-note" id="run-status"></p>
+      <ul class="error-list" id="run-errors" hidden></ul>
+    </section>
+
+    <section class="rail-group">
+      <dl class="summary" id="summary" hidden></dl>
+    </section>
+  </aside>
+
+  <div class="canvas-surface">
+    <canvas id="grid-canvas"></canvas>
+
+    <div class="playback">
+      <button type="button" class="action" id="play">Play</button>
+      <input type="range" id="scrubber" min="0" max="0" value="0" aria-label="Timeline">
+      <button type="button" class="action" id="rate">4×</button>
+      <span class="numeric" id="clock"></span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/simulate.js') }}"></script>
+{% endblock %}

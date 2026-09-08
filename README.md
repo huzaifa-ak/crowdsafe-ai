@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 9 of 20 complete. Deployed at
+Four-week build, one developer. Day 10 of 20 complete — halfway. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -115,6 +115,13 @@ the crowd can reach a way out:
 | `POST` | `/api/venues/validate`      | Layout report for an unsaved venue |
 | `GET`  | `/api/venues/{id}/validate` | Layout report for a saved one |
 
+### Playback
+
+`/simulate/<id>` configures a run, sends it, and plays it back on the canvas.
+The trace arrives with the response, so scrubbing is entirely local and never
+waits on the network. Space plays and pauses, the arrow keys step a tick at a
+time (hold shift for ten), and the rate button cycles 1× to 8× real time.
+
 ### Editor
 
 Brush or rectangle, painting the cell type picked in the palette. Number keys
@@ -145,7 +152,7 @@ can show all of them in one pass:
 | Week | Target |
 |------|--------|
 | 1 | Create, edit, save and reopen a venue; validation — **done** |
-| 2 | Agents navigate obstacles to exits, live and from saved runs |
+| 2 | Agents navigate obstacles to exits, live and from saved runs — **done** |
 | 3 | Congestion identified and explained |
 | 4 | Comparison, examples, docs, deployment |
 

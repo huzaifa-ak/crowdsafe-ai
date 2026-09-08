@@ -62,3 +62,34 @@ def test_editor_has_save_controls(client):
     assert 'id="venue-name"' in body
     assert 'id="save"' in body
     assert 'id="save-errors"' in body
+
+
+def test_simulate_page_embeds_the_venue(client):
+    venue = _create_venue(client, name="Hall")
+    body = client.get(f"/simulate/{venue['id']}").data.decode()
+    assert f'data-venue-id="{venue["id"]}"' in body
+    assert f'data-cells="{venue["cells"]}"' in body
+    assert 'id="grid-canvas"' in body
+
+
+def test_simulate_page_has_playback_controls(client):
+    venue = _create_venue(client)
+    body = client.get(f"/simulate/{venue['id']}").data.decode()
+    for control in ('id="play"', 'id="scrubber"', 'id="rate"', 'id="run"'):
+        assert control in body
+
+
+def test_simulate_page_offers_both_routing_models(client):
+    venue = _create_venue(client)
+    body = client.get(f"/simulate/{venue['id']}").data.decode()
+    assert 'value="nearest"' in body
+    assert 'value="balanced"' in body
+
+
+def test_simulate_page_for_a_missing_venue_is_404(client):
+    assert client.get("/simulate/999").status_code == 404
+
+
+def test_dashboard_links_to_running_a_venue(client):
+    venue = _create_venue(client)
+    assert f'/simulate/{venue["id"]}' in client.get("/").data.decode()
