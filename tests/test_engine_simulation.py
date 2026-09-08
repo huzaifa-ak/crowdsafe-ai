@@ -278,3 +278,110 @@ def test_trace_positions_are_always_inside_the_venue(build):
     for tick in result.trace:
         for x, y in zip(tick[0::2], tick[1::2]):
             assert grid.is_walkable(x, y)
+
+
+# Congestion-aware routing ---------------------------------------------------
+
+LOPSIDED = """
+    ####################
+    #SSSSSSSS..........#
+    #SSSSSSSS..........#
+    #SSSSSSSS..........#
+    #SSSSSSSS..........#
+    #SSSSSSSS..........#
+    E..................E
+    ####################
+"""
+
+DETOUR = """
+    ##################
+    #SSSS#...........#
+    #SSSS#...........#
+    #SSSS.......######
+    #SSSS#...........#
+    #SSSS#...........#
+    #SSSS#..........E#
+    ##################
+"""
+
+
+def test_nearest_routing_sends_everyone_to_the_close_door(build):
+    """The naive model, and the one that exposes a lopsided layout: both doors
+    are the same width, but one is far closer to the crowd."""
+    result = simulate(build(LOPSIDED),
+                      config(num_agents=120, routing="nearest", reroute=False))
+    usage = result.exit_usage
+    assert usage[1] == 120
+    assert usage[2] == 0
+
+
+def test_balanced_routing_splits_the_crowd_between_doors(build):
+    result = simulate(build(LOPSIDED),
+                      config(num_agents=120, routing="balanced", reroute=False))
+    near, far = result.exit_usage[1], result.exit_usage[2]
+    assert far > 0
+    # Neither door should carry more than about two thirds.
+    assert max(near, far) / 120 < 0.7
+
+
+def test_balanced_routing_clears_a_lopsided_hall_faster(build):
+    naive = simulate(build(LOPSIDED), config(num_agents=120, routing="nearest", reroute=False))
+    managed = simulate(build(LOPSIDED), config(num_agents=120, routing="balanced", reroute=False))
+    assert managed.clearing_ticks < naive.clearing_ticks
+
+
+def test_rerouting_moves_people_to_the_other_door(build):
+    """With nearest routing nobody starts out heading for the far door. If any
+    of them end up using it, they changed their mind mid-run."""
+    result = simulate(build(LOPSIDED), config(num_agents=120, routing="nearest", reroute=True))
+    assert result.exit_usage[2] > 0
+    assert result.reroutes > 0
+
+
+def test_rerouting_helps_when_the_crowd_picks_the_wrong_door(build):
+    stubborn = simulate(build(LOPSIDED), config(num_agents=120, routing="nearest", reroute=False))
+    adaptive = simulate(build(LOPSIDED), config(num_agents=120, routing="nearest", reroute=True))
+    assert adaptive.clearing_ticks < stubborn.clearing_ticks
+
+
+def test_rerouting_finds_the_long_way_round_a_jam(build):
+    """One exit, one narrow gap, and a longer route that avoids it. Nobody
+    switches doors here — the only thing rerouting can do is take the detour."""
+    direct = simulate(build(DETOUR), config(num_agents=70, reroute=False))
+    detoured = simulate(build(DETOUR), config(num_agents=70, reroute=True))
+    assert detoured.clearing_ticks < direct.clearing_ticks
+    assert detoured.reroutes > 0
+
+
+def test_rerouting_can_be_turned_off(build):
+    result = simulate(build(LOPSIDED), config(num_agents=120, reroute=False))
+    assert result.reroutes == 0
+    assert result.searches == 0
+
+
+def test_the_route_cache_stops_a_jam_causing_one_search_per_agent(build):
+    """Everyone stuck behind the same bottleneck is on one of a few cells, so
+    they should share searches rather than each paying for their own."""
+    result = simulate(build(LOPSIDED), config(num_agents=120, reroute=True))
+    assert result.searches < result.reroutes
+
+
+def test_rerouting_does_not_strand_anyone(build):
+    """An occupancy-aware search can fail where a plain one would not, because
+    the only way through may be full at that instant. Failing must mean waiting,
+    never losing the route."""
+    result = simulate(build(DETOUR), config(num_agents=70, reroute=True))
+    assert result.status == "complete"
+    assert result.evacuated == 70
+
+
+def test_rerouting_stays_deterministic(build):
+    first = simulate(build(LOPSIDED), config(num_agents=120, seed=3, reroute=True))
+    second = simulate(build(LOPSIDED), config(num_agents=120, seed=3, reroute=True))
+    assert first.trace == second.trace
+    assert first.reroutes == second.reroutes
+
+
+def test_exit_usage_still_adds_up_after_people_change_their_minds(build):
+    result = simulate(build(LOPSIDED), config(num_agents=120, reroute=True))
+    assert sum(result.exit_usage.values()) == result.evacuated

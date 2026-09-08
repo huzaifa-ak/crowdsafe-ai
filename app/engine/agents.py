@@ -29,6 +29,12 @@ class Agent:
 
     tick_exited: int | None = None
 
+    # Consecutive ticks this agent wanted to move and could not. Drives
+    # rerouting: someone standing still behind a jam is the signal that the
+    # route they were given is no longer the best one available.
+    blocked_ticks: int = 0
+    last_reroute_tick: int = -10_000
+
     @property
     def position(self) -> Point:
         return (self.x, self.y)
@@ -81,24 +87,47 @@ def exit_distance_fields(grid: Grid) -> dict[int, dict[Point, int]]:
     return {exit_.id: distance_field(grid, list(exit_.cells)) for exit_ in grid.exits}
 
 
-def assign_exits(grid: Grid, agents: list[Agent], fields: dict[int, dict[Point, int]]) -> None:
-    """Send everyone to their nearest exit, ties going to the lower exit id.
+def assign_exits(grid: Grid, agents: list[Agent], fields: dict[int, dict[Point, int]],
+                 speed: float = 1.0, balanced: bool = False) -> None:
+    """Choose a doorway for each agent.
 
-    This is the naive assignment: people head for the closest door and take no
-    account of how busy it is. Making it congestion-aware is Day 9's job, and
-    keeping the naive version around matters — it is the behaviour that
-    produces the bottlenecks the tool is meant to find.
+    Two models, both defensible, and which one to use is a question about the
+    venue rather than about the code:
+
+    `nearest` — everyone walks to the closest door and takes no account of how
+    busy it is. This is what an unsignposted crowd actually does, and it is the
+    behaviour that produces the bottlenecks the tool exists to find. Default.
+
+    `balanced` — people weigh the queue as well as the walk. Both terms are in
+    ticks, so they are directly comparable: walking distance divided by speed,
+    plus the wait implied by everyone already heading for that door. It models
+    a venue with marshals or clear signage, and running one layout both ways
+    shows what better crowd management alone would be worth.
+
+    Assignment is greedy in agent-id order. That order is fixed and so the
+    result is reproducible — which matters here, because under the balanced
+    model each choice changes the cost of the next one.
     """
+    widths = {exit_.id: exit_.width for exit_ in grid.exits}
+    planned = {exit_.id: 0 for exit_ in grid.exits}
+
     for agent in agents:
         best_id = None
-        best_distance = None
+        best_cost = None
         for exit_id, field_ in fields.items():
             distance = field_.get(agent.position)
             if distance is None:
                 continue
-            if best_distance is None or distance < best_distance:
-                best_id, best_distance = exit_id, distance
+            cost = distance / speed
+            if balanced:
+                # Ticks the last person in this queue waits, given one
+                # admission per exit cell per tick.
+                cost += planned[exit_id] / widths[exit_id]
+            if best_cost is None or cost < best_cost:
+                best_id, best_cost = exit_id, cost
         agent.exit_id = best_id
+        if best_id is not None:
+            planned[best_id] += 1
 
 
 def plan_routes(grid: Grid, agents: list[Agent]) -> None:
@@ -122,3 +151,38 @@ def plan_routes(grid: Grid, agents: list[Agent]) -> None:
         path = cache[key]
         agent.path = list(path) if path else []
         agent.path_index = 0
+
+
+class RoutePlanner:
+    """Rebuilds routes mid-run for agents who have stopped making progress.
+
+    Two things keep this affordable. A cooldown stops an agent replanning every
+    tick it is stuck — without it, a jam of eighty people would trigger eighty
+    A* searches a tick and the run would crawl. And a cache shared across a
+    short window of ticks means the dozens of agents piled on the same few
+    cells behind a bottleneck share one search rather than repeating it.
+
+    The cache is keyed by epoch as well as position, so it expires on its own:
+    a route computed while a corridor was full must not be handed out once the
+    corridor has drained.
+    """
+
+    def __init__(self, grid: Grid, cost, epoch_length: int = 10):
+        self.grid = grid
+        self.cost = cost
+        self.epoch_length = epoch_length
+        self._cache: dict[tuple[Point, int, int], list[Point] | None] = {}
+        self.searches = 0
+
+    def route(self, position: Point, exit_id: int, tick: int) -> list[Point] | None:
+        epoch = tick // self.epoch_length
+        key = (position, exit_id, epoch)
+        if key not in self._cache:
+            goal = next(e for e in self.grid.exits if e.id == exit_id)
+            self._cache[key] = astar(self.grid, position, goal.cells, cost=self.cost)
+            self.searches += 1
+            # An epoch's worth of entries is all that is ever read; dropping
+            # the rest keeps this from growing across a 600-tick run.
+            if len(self._cache) > 4000:
+                self._cache = {k: v for k, v in self._cache.items() if k[2] == epoch}
+        return self._cache[key]

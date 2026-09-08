@@ -60,6 +60,32 @@ here before any code depends on them.
    path planning must happen in the seeded shuffle order because
    `planned_usage` grows as each agent plans.
 
+## Behaviour changes
+
+**Day 9 — rerouting and the balanced routing model.** Agents now abandon a
+route they have been stuck on for eight ticks, subject to a twenty-tick
+cooldown, and reconsider which door to head for. The queue for a door is
+measured as the number of people still heading for it divided by its width —
+the wait in ticks — rather than by how full the cells at the doorway are, which
+cannot tell a queue of a hundred from a queue of three.
+
+Exit assignment gained a second model. `nearest` is unchanged and remains the
+default: people walk to the closest door and ignore how busy it is, which is
+what an unsignposted crowd does and what exposes a lopsided layout. `balanced`
+adds the expected wait to the walk, modelling marshals or clear signage.
+Running one layout both ways measures what crowd management alone is worth.
+
+Measured on a hall with two equal doors and the crowd bunched at one end:
+
+| Model | Clearing ticks | Exit split |
+|---|---|---|
+| nearest, no reroute | 127 | 120 / 0 |
+| nearest + reroute | 77 | 76 / 44 |
+| balanced | 72 | 62 / 58 |
+
+The golden digest was regenerated for this change; the reason is recorded in
+`tests/test_golden.py`.
+
 Open for Day 15: a single narrow exit currently trips the time, density,
 bottleneck and exit penalties at once, so a poor layout and a dangerous one can
 both grade F. Decide then whether to cap the combined penalty.

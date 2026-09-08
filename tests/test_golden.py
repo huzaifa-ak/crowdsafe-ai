@@ -41,7 +41,11 @@ LAYOUT = """
 
 CHARS = {".": "0", "#": "1", "B": "2", "N": "3", "E": "4", "S": "5"}
 CONFIG = {"num_agents": 60, "speed": 1.0, "cell_capacity": 3,
-          "max_ticks": 600, "seed": 42}
+          "max_ticks": 600, "seed": 42, "routing": "nearest", "reroute": True}
+
+# History of deliberate changes to this digest:
+#   Day 9 — rerouting added. Agents now leave a route they are stuck on, so
+#           the same venue evacuates differently and faster. Regenerated.
 
 
 def _grid() -> Grid:

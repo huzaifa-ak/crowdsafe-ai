@@ -250,3 +250,50 @@ def test_a_compressed_trace_still_replays_exactly(client, venue_id):
     created = run(client, venue_id, num_agents=30, seed=11).get_json()
     fetched = client.get(f"/api/simulations/{created['id']}").get_json()
     assert fetched["trace"] == created["trace"]
+
+
+# Routing options ------------------------------------------------------------
+
+
+def test_routing_defaults_to_nearest_with_rerouting_on(client, venue_id):
+    config = run(client, venue_id, num_agents=20).get_json()["config"]
+    assert config["routing"] == "nearest"
+    assert config["reroute"] is True
+
+
+def test_balanced_routing_can_be_requested(client, venue_id):
+    config = run(client, venue_id, num_agents=20, routing="balanced").get_json()["config"]
+    assert config["routing"] == "balanced"
+
+
+def test_an_unknown_routing_model_is_refused(client, venue_id):
+    response = run(client, venue_id, num_agents=20, routing="telepathy")
+    assert response.status_code == 422
+    assert response.get_json()["error"]["details"][0]["field"] == "routing"
+
+
+def test_reroute_must_be_a_boolean(client, venue_id):
+    assert run(client, venue_id, num_agents=20, reroute="sometimes").status_code == 422
+
+
+def test_the_two_routing_models_give_different_runs(client, ascii_grid):
+    lopsided = ascii_grid(
+        """
+        ####################
+        #SSSSSSSS..........#
+        #SSSSSSSS..........#
+        #SSSSSSSS..........#
+        #SSSSSSSS..........#
+        #SSSSSSSS..........#
+        E..................E
+        ####################
+        """,
+        name="Lopsided hall",
+    )
+    venue = client.post("/api/venues", json=lopsided).get_json()["id"]
+    naive = run(client, venue, num_agents=120, routing="nearest", reroute=False).get_json()
+    managed = run(client, venue, num_agents=120, routing="balanced", reroute=False).get_json()
+
+    assert managed["summary"]["clearing_ticks"] < naive["summary"]["clearing_ticks"]
+    assert naive["summary"]["exit_usage"]["2"] == 0
+    assert managed["summary"]["exit_usage"]["2"] > 0

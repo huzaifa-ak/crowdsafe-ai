@@ -4,16 +4,18 @@
     "speed": 1.0,
     "cell_capacity": 3,
     "max_ticks": 600,
-    "seed": 42
+    "seed": 42,
+    "routing": "nearest",
+    "reroute": true
   },
   "status": "complete",
-  "ticks": 73,
-  "clearing_ticks": 73,
+  "ticks": 64,
+  "clearing_ticks": 64,
   "evacuated": 60,
   "stranded": 0,
   "exit_usage": {
-    "1": 0,
-    "2": 60
+    "1": 5,
+    "2": 55
   },
-  "trace_sha256": "df63b31f9af01155f0e8b08274aa0e074d3115ece98f77b63800b6d9dff1b542"
+  "trace_sha256": "3a4e6dc3830d699359cf214a90548b8876ebabfb006f7d71d00ae9c6f5d26ba8"
 }

@@ -140,11 +140,18 @@ def validate_simulation_config(payload) -> dict:
             payload, "seed", 0, 2**31 - 1, config["DEFAULT_SEED"], problems),
     }
 
-    entrances = payload.get("entrances_are_exits", False)
-    if not isinstance(entrances, bool):
-        problems.append(_problem("entrances_are_exits", "entrances_are_exits must be true or false"))
+    for flag, default in (("entrances_are_exits", False), ("reroute", True)):
+        value = payload.get(flag, default)
+        if not isinstance(value, bool):
+            problems.append(_problem(flag, f"{flag} must be true or false"))
+        else:
+            cleaned[flag] = value
+
+    routing = payload.get("routing", "nearest")
+    if routing not in ("nearest", "balanced"):
+        problems.append(_problem("routing", "routing must be 'nearest' or 'balanced'"))
     else:
-        cleaned["entrances_are_exits"] = entrances
+        cleaned["routing"] = routing
 
     if problems:
         raise ValidationError("These simulation settings could not be used.", problems)

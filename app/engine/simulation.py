@@ -14,7 +14,9 @@ every time.
 import random
 from dataclasses import dataclass, field
 
-from .agents import Agent, assign_exits, exit_distance_fields, plan_routes, spawn_agents
+from .agents import (
+    Agent, RoutePlanner, assign_exits, exit_distance_fields, plan_routes, spawn_agents,
+)
 from .density import DensityAccumulator
 from .grid import Grid
 
@@ -27,6 +29,25 @@ MIN_SLOW_FACTOR = 0.2
 # — about 1.4 people per metre per second, which is roughly what a real doorway
 # manages (D6).
 EXIT_THROUGHPUT_PER_CELL = 1
+
+# Rerouting. An agent that has been unable to move for this many consecutive
+# ticks is standing behind something that is not clearing, and is worth
+# replanning. Low enough to react within a few seconds of simulated time, high
+# enough that ordinary shuffling at a doorway does not trigger it.
+REROUTE_AFTER_BLOCKED_TICKS = 8
+
+# Minimum gap between one agent's reroutes. Without it a persistent jam makes
+# every agent in it replan every tick, and the search cost swamps the run.
+REROUTE_COOLDOWN_TICKS = 20
+
+# What a crowded cell costs to walk into, relative to an empty one. At 4, a
+# full cell costs five steps, so an agent will accept a detour of up to four
+# cells to get round a queue — but not an arbitrarily long one.
+OCCUPANCY_COST_WEIGHT = 4.0
+
+# How much better another door must look before an agent switches to it.
+# Without a margin, two similar doors make people oscillate.
+EXIT_SWITCH_MARGIN_TICKS = 10
 
 # Ticks with nobody moving and nobody leaving before the run is called stuck.
 # Long enough that a brief jam at a door does not trip it, short enough that a
@@ -43,6 +64,11 @@ class SimulationConfig:
     seed: int = 42
     entrances_are_exits: bool = False
 
+    # "nearest" or "balanced" — see assign_exits.
+    routing: str = "nearest"
+    # Whether people go round a jam once they realise they are stuck in one.
+    reroute: bool = True
+
     def as_dict(self) -> dict:
         return {
             "num_agents": self.num_agents,
@@ -51,6 +77,8 @@ class SimulationConfig:
             "max_ticks": self.max_ticks,
             "seed": self.seed,
             "entrances_are_exits": self.entrances_are_exits,
+            "routing": self.routing,
+            "reroute": self.reroute,
         }
 
 
@@ -63,6 +91,8 @@ class SimulationResult:
     stranded: int
     exit_usage: dict[int, int]
     exit_ticks: list[int | None]     # per agent, in id order
+    reroutes: int = 0
+    searches: int = 0
     trace: list[list[int]] = field(default_factory=list)
     density: dict = field(default_factory=dict)
 
@@ -84,8 +114,9 @@ class Simulation:
         self.agents = spawn_agents(
             grid, config.num_agents, config.speed, config.cell_capacity, self.rng
         )
-        fields = exit_distance_fields(grid)
-        assign_exits(grid, self.agents, fields)
+        self.fields = exit_distance_fields(grid)
+        assign_exits(grid, self.agents, self.fields, speed=config.speed,
+                     balanced=config.routing == "balanced")
         plan_routes(grid, self.agents)
 
         # Occupancy as a flat array indexed the same way as the cell string.
@@ -104,8 +135,20 @@ class Simulation:
         }
 
         self.exit_cells = {cell for exit_ in grid.exits for cell in exit_.cells}
+
+        # How many people are still heading for each door. This is the queue
+        # that matters: the cells immediately inside a doorway hold at most a
+        # handful of people, so measuring congestion there makes a queue of a
+        # hundred look no worse than a queue of three.
+        self.heading_for = {exit_.id: 0 for exit_ in grid.exits}
+        for agent in self.agents:
+            if agent.exit_id is not None and not agent.is_stranded:
+                self.heading_for[agent.exit_id] += 1
         self.exit_usage = {exit_.id: 0 for exit_ in grid.exits}
         self.trace: list[list[int]] = []
+
+        self.planner = RoutePlanner(grid, self._cell_cost)
+        self.reroutes = 0
 
         self.tick = 0
         self.evacuated = 0
@@ -120,6 +163,80 @@ class Simulation:
         """How much the crowd already in `cell` slows an agent entering it."""
         occupied = self.occupancy[self._index(*cell)]
         return max(MIN_SLOW_FACTOR, 1.0 - occupied / self.config.cell_capacity)
+
+    def _cell_cost(self, x: int, y: int) -> float:
+        """What it costs to walk into this cell, in step-equivalents.
+
+        Never below 1: A*'s heuristic is only admissible while every step costs
+        at least one, and an underpriced step would make the path it returns
+        no longer the cheapest one.
+        """
+        occupied = self.occupancy[self._index(x, y)]
+        return 1.0 + OCCUPANCY_COST_WEIGHT * occupied / self.config.cell_capacity
+
+    def _should_reroute(self, agent: Agent) -> bool:
+        if not self.config.reroute:
+            return False
+        if agent.blocked_ticks < REROUTE_AFTER_BLOCKED_TICKS:
+            return False
+        return self.tick - agent.last_reroute_tick >= REROUTE_COOLDOWN_TICKS
+
+    def _reroute(self, agent: Agent) -> None:
+        """Replan around the congestion, and reconsider which door to head for.
+
+        The exit choice is re-made with a margin: a door has to be clearly
+        better, not marginally better, or agents flip between two doors every
+        cooldown and nobody gets anywhere. The margin is what stops that.
+        """
+        agent.last_reroute_tick = self.tick
+        agent.blocked_ticks = 0
+
+        target = self._best_exit_now(agent)
+        path = self.planner.route(agent.position, target, self.tick)
+
+        # An occupancy-aware search can fail where a plain one would not: the
+        # only way through may be full at this instant. Keeping the old path
+        # means the agent waits rather than giving up.
+        if not path or len(path) < 2:
+            return
+
+        if target != agent.exit_id:
+            self.heading_for[agent.exit_id] -= 1
+            self.heading_for[target] += 1
+        agent.exit_id = target
+        agent.path = path
+        agent.path_index = 0
+        self.reroutes += 1
+
+    def _best_exit_now(self, agent: Agent) -> int:
+        """Estimated ticks to get out by each door: the walk, plus the wait.
+
+        The wait is the number of people still heading for that door divided by
+        its width, which is exactly how long the last of them will take to get
+        through. Both terms are in ticks, so they add.
+
+        Because the count updates the moment an agent switches, this
+        self-limits: the first people to abandon a jammed door make the
+        alternative less attractive for those behind them, and the crowd
+        settles into a split rather than stampeding across en masse.
+        """
+        current = agent.exit_id
+        if len(self.grid.exits) < 2:
+            return current
+
+        best_id, best_cost = current, None
+        for exit_ in self.grid.exits:
+            distance = self.fields[exit_.id].get(agent.position)
+            if distance is None:
+                continue
+            cost = distance / self.config.speed + self.heading_for[exit_.id] / exit_.width
+            if exit_.id == current:
+                # Switching has to be clearly better, not marginally better.
+                # Without hysteresis two similar doors make people oscillate.
+                cost -= EXIT_SWITCH_MARGIN_TICKS
+            if best_cost is None or cost < best_cost:
+                best_id, best_cost = exit_.id, cost
+        return best_id
 
     def active_agents(self) -> list[Agent]:
         return [a for a in self.agents if not a.has_left and not a.is_stranded]
@@ -168,6 +285,8 @@ class Simulation:
             stranded=stranded,
             exit_usage=dict(self.exit_usage),
             exit_ticks=[a.tick_exited for a in self.agents],
+            reroutes=self.reroutes,
+            searches=self.planner.searches,
             trace=self.trace,
             density=self.density.as_dict(),
         )
@@ -197,6 +316,7 @@ class Simulation:
 
             if target in self.exit_cells:
                 if admissions[target] <= 0:
+                    agent.blocked_ticks += 1
                     continue
                 admissions[target] -= 1
                 self._leave(agent, target)
@@ -204,8 +324,12 @@ class Simulation:
                 continue
 
             if self.occupancy[self._index(*target)] >= self.config.cell_capacity:
+                agent.blocked_ticks += 1
+                if self._should_reroute(agent):
+                    self._reroute(agent)
                 continue
 
+            agent.blocked_ticks = 0
             self._move(agent, target)
             something_happened = True
 
@@ -224,6 +348,8 @@ class Simulation:
         agent.credit -= 1.0
         agent.tick_exited = self.tick
         self.evacuated += 1
+        if agent.exit_id is not None:
+            self.heading_for[agent.exit_id] -= 1
 
         exit_ = self.grid.exit_for_cell(target)
         if exit_ is not None:

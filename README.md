@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 8 of 20 complete. Deployed at
+Four-week build, one developer. Day 9 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -76,6 +76,13 @@ nearest exit, and walks out — slowed by the people ahead of it, capped at thre
 per square metre, and admitted through each doorway at one person per cell per
 tick. A run ends when the room is clear, when the tick budget runs out, or when
 nothing has moved for 25 ticks.
+
+People who stay stuck behind a jam reroute around it, and will change which
+door they are heading for when another one is clearly quicker. Exit choice has
+two models: `nearest` (the default — an unsignposted crowd, and the one that
+exposes a lopsided layout) and `balanced` (people weigh the queue as well as
+the walk, modelling marshals or good signage). Running one venue both ways
+measures what crowd management alone would be worth.
 
 ### Simulation API
 
