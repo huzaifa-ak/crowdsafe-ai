@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 10 of 20 complete — halfway. Deployed at
+Four-week build, one developer. Day 11 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -121,6 +121,19 @@ the crowd can reach a way out:
 The trace arrives with the response, so scrubbing is entirely local and never
 waits on the network. Space plays and pauses, the arrow keys step a tick at a
 time (hold shift for ten), and the rate button cycles 1× to 8× real time.
+
+### Heatmap
+
+Three views of the same run, answering different questions. **Worst crowding**
+is peak people per m², scaled against the density cap rather than the observed
+maximum, so a venue that never got busy looks calm instead of being rescaled
+until it looks alarming. **Time spent crowded** counts ticks above the
+threshold — a corner that briefly packed and a corridor that stayed packed are
+different problems. **Busiest routes** is person-ticks per cell, which shows
+where people went rather than where they suffered.
+
+Warm colour is used nowhere else in the app, so anything warm on the canvas
+means crowding and nothing else.
 
 ### Editor
 

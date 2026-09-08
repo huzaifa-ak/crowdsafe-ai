@@ -71,6 +71,20 @@
     </section>
 
     <section class="rail-group">
+      <h2 class="rail-heading">Heatmap</h2>
+      <div class="size-row">
+        <label for="heat-mode">Show</label>
+        <select id="heat-mode">
+          <option value="none">Nothing</option>
+          <option value="peak">Worst crowding</option>
+          <option value="duration">Time spent crowded</option>
+          <option value="traffic">Busiest routes</option>
+        </select>
+      </div>
+      <div class="legend" id="legend" hidden></div>
+    </section>
+
+    <section class="rail-group">
       <dl class="summary" id="summary" hidden></dl>
     </section>
   </aside>
@@ -83,6 +97,9 @@
       <input type="range" id="scrubber" min="0" max="0" value="0" aria-label="Timeline">
       <button type="button" class="action" id="rate">4×</button>
       <span class="numeric" id="clock"></span>
+    </div>
+
+    <div class="cell-readout numeric" id="cell-readout"></div>
     </div>
   </div>
 </div>

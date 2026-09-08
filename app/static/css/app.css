@@ -435,3 +435,42 @@ h1 {
 #scrubber:disabled { cursor: default; opacity: 0.4; }
 
 .row-actions a + a { margin-left: calc(var(--step) * 2); }
+
+/* Heatmap legend ---------------------------------------------------------- */
+
+.legend { display: flex; flex-direction: column; gap: var(--step); }
+
+.legend-caption {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.legend-scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.legend-stop {
+  padding: calc(var(--step) * 0.5) 2px;
+  font-size: 0.68rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-readout {
+  position: absolute;
+  right: calc(var(--step) * 2);
+  top: calc(var(--step) * 2);
+  padding: calc(var(--step) * 0.5) var(--step);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  min-height: 1.4em;
+}

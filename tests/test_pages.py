@@ -93,3 +93,12 @@ def test_simulate_page_for_a_missing_venue_is_404(client):
 def test_dashboard_links_to_running_a_venue(client):
     venue = _create_venue(client)
     assert f'/simulate/{venue["id"]}' in client.get("/").data.decode()
+
+
+def test_simulate_page_offers_every_heatmap_mode(client):
+    venue = _create_venue(client)
+    body = client.get(f"/simulate/{venue['id']}").data.decode()
+    for mode in ("none", "peak", "duration", "traffic"):
+        assert f'value="{mode}"' in body
+    assert 'id="legend"' in body
+    assert 'id="cell-readout"' in body

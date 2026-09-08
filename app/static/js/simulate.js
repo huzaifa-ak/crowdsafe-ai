@@ -10,6 +10,7 @@ import { api } from './api.js';
 import { GridCanvas } from './canvas.js';
 import { Grid } from './grid.js';
 import { Player } from './playback.js';
+import { MODES, heatColours, legendStops } from './heatmap.js';
 
 const RATES = [1, 2, 4, 8];
 
@@ -26,6 +27,10 @@ class SimulatePage {
     this.canvas = new GridCanvas(root.querySelector('#grid-canvas'));
     this.player = null;
     this.running = false;
+    this.density = null;
+    this.heatMode = 'none';
+    this.heat = null;
+    this.hover = null;
 
     this.runButton = root.querySelector('#run');
     this.playButton = root.querySelector('#play');
@@ -35,6 +40,9 @@ class SimulatePage {
     this.errorList = root.querySelector('#run-errors');
     this.summaryPanel = root.querySelector('#summary');
     this.clock = root.querySelector('#clock');
+    this.heatSelect = root.querySelector('#heat-mode');
+    this.legend = root.querySelector('#legend');
+    this.cellReadout = root.querySelector('#cell-readout');
 
     this.#bindControls();
     window.addEventListener('resize', () => this.#refit());
@@ -79,6 +87,10 @@ class SimulatePage {
   #showResult(result) {
     const summary = result.summary;
     this.summary = summary;
+    this.density = result.density
+      ? { ...result.density, capacity: this.#settings().cell_capacity }
+      : null;
+    this.#applyHeatMode();
 
     if (this.player) this.player.destroy();
     this.player = new Player(result.trace, () => this.#drawFrame());
@@ -137,7 +149,11 @@ class SimulatePage {
 
   #drawFrame() {
     const player = this.player;
-    this.canvas.render(this.grid, { agents: player ? player.frame() : [] });
+    this.canvas.render(this.grid, {
+      agents: player ? player.frame() : [],
+      heat: this.heat,
+      hover: this.hover,
+    });
 
     if (!player) return;
     this.scrubber.value = String(player.tick);
@@ -156,8 +172,71 @@ class SimulatePage {
     }
   }
 
+  /* Heatmap ------------------------------------------------------------- */
+
+  #applyHeatMode() {
+    const mode = this.heatMode;
+    this.heat = mode === 'none' ? null : heatColours(this.density, mode);
+    this.#renderLegend();
+    this.#drawFrame();
+  }
+
+  #renderLegend() {
+    this.legend.replaceChildren();
+    const spec = MODES[this.heatMode];
+    if (!spec || !this.density) {
+      this.legend.hidden = true;
+      return;
+    }
+
+    const caption = document.createElement('p');
+    caption.className = 'legend-caption';
+    caption.textContent = spec.legend;
+    this.legend.append(caption);
+
+    const scale = document.createElement('div');
+    scale.className = 'legend-scale';
+    for (const stop of legendStops(this.density, this.heatMode)) {
+      const swatch = document.createElement('span');
+      swatch.className = 'legend-stop';
+      swatch.style.background = stop.colour;
+      swatch.textContent = stop.label;
+      scale.append(swatch);
+    }
+    this.legend.append(scale);
+    this.legend.hidden = false;
+  }
+
+  #readCell(cell) {
+    if (!cell || !this.density || this.heatMode === 'none') {
+      this.cellReadout.textContent = '';
+      return;
+    }
+    const spec = MODES[this.heatMode];
+    const value = this.density[spec.array][cell.y * this.grid.width + cell.x];
+    this.cellReadout.textContent =
+      `${cell.x}, ${cell.y} · ${spec.format(value)} ${spec.unit}`;
+  }
+
   #bindControls() {
     this.runButton.addEventListener('click', () => this.run());
+
+    this.heatSelect.addEventListener('change', () => {
+      this.heatMode = this.heatSelect.value;
+      this.#applyHeatMode();
+    });
+
+    const canvasElement = this.canvas.canvas;
+    canvasElement.addEventListener('pointermove', (event) => {
+      this.hover = this.canvas.cellAt(event, this.grid);
+      this.#readCell(this.hover);
+      this.#drawFrame();
+    });
+    canvasElement.addEventListener('pointerleave', () => {
+      this.hover = null;
+      this.#readCell(null);
+      this.#drawFrame();
+    });
 
     this.playButton.addEventListener('click', () => {
       this.player.toggle();

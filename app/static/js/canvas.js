@@ -78,6 +78,7 @@ export class GridCanvas {
    * @param {string} overlay.previewColor
    * @param {{x: number, y: number}|null} overlay.hover
    * @param {number[]} overlay.agents flat [x, y, x, y, ...] for one tick
+   * @param {(string|null)[]} overlay.heat one colour per cell, row-major
    */
   render(grid, overlay = {}) {
     const ctx = this.context;
@@ -90,6 +91,17 @@ export class GridCanvas {
       for (let x = 0; x < grid.width; x += 1) {
         ctx.fillStyle = CELL_COLORS[grid.get(x, y)] || CELL_COLORS['0'];
         ctx.fillRect(x * size, y * size, size, size);
+      }
+    }
+
+    // Heat sits over the cells but under the rules, so the grid stays legible
+    // through it and the plan underneath remains readable.
+    if (overlay.heat) {
+      for (let i = 0; i < overlay.heat.length; i += 1) {
+        const colour = overlay.heat[i];
+        if (!colour) continue;
+        ctx.fillStyle = colour;
+        ctx.fillRect((i % grid.width) * size, Math.floor(i / grid.width) * size, size, size);
       }
     }
 
