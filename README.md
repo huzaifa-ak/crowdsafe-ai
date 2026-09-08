@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 11 of 20 complete. Deployed at
+Four-week build, one developer. Day 12 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -121,6 +121,26 @@ the crowd can reach a way out:
 The trace arrives with the response, so scrubbing is entirely local and never
 waits on the network. Space plays and pauses, the arrow keys step a tick at a
 time (hold shift for ten), and the rate button cycles 1× to 8× real time.
+
+### Safety score
+
+A score out of 100 with an A–F grade, built by subtracting three bounded
+penalties from a clean sheet. Every penalty names what caused it.
+
+| Component | Weight | Measures |
+|---|---|---|
+| Time | 35 | How long it took (25) plus how wasteful that was (10) |
+| Congestion | 40 | How much of the floor got tight, and for how long |
+| Exits | 25 | Whether there is enough door, and whether it is used evenly |
+
+Anyone left inside caps the score at 35 regardless of the rest.
+
+Two things the score deliberately avoids. It does not lean on the free-flow
+ratio, because that baseline grows with the crowd once the doors are the
+binding limit — a ratio-driven score rates 300 people safer than 120, and
+flatters venues whose theoretical best is slow because their doors are narrow.
+And exit balance is measured against each door's share of the total width, so a
+3 m door carrying three quarters of the crowd is correct rather than penalised.
 
 ### Heatmap
 

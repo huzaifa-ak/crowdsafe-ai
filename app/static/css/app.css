@@ -474,3 +474,68 @@ h1 {
   font-size: 0.78rem;
   min-height: 1.4em;
 }
+
+/* Safety score ------------------------------------------------------------ */
+
+.score { display: flex; flex-direction: column; gap: calc(var(--step) * 2); }
+
+.score-headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: calc(var(--step) * 1.5);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.score-grade { font-size: 2rem; font-weight: 600; line-height: 1; }
+.score-number { color: var(--ink-soft); font-size: 0.95rem; }
+.score-number small { font-size: 0.75rem; }
+
+/* Green through red, so the grade reads before the number does. */
+.grade-A { border-color: var(--exit); }
+.grade-A .score-grade { color: var(--exit-dark); }
+.grade-B .score-grade { color: #4a7c3f; }
+.grade-C .score-grade { color: #a8760d; }
+.grade-D .score-grade { color: #c2560c; }
+.grade-F { border-color: var(--alert); }
+.grade-F .score-grade { color: var(--alert); }
+
+.score-component { display: flex; flex-direction: column; gap: calc(var(--step) * 0.5); }
+
+.score-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.score-label .numeric { color: var(--ink-soft); }
+
+.score-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--rule-faint);
+  overflow: hidden;
+}
+
+.score-bar span {
+  display: block;
+  height: 100%;
+  background: var(--alert);
+}
+
+.score-detail {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.score-cap {
+  margin: 0;
+  padding: var(--step);
+  border-radius: var(--radius);
+  background: #fdf0ef;
+  color: var(--alert);
+  font-size: 0.78rem;
+}

@@ -43,6 +43,7 @@ class SimulatePage {
     this.heatSelect = root.querySelector('#heat-mode');
     this.legend = root.querySelector('#legend');
     this.cellReadout = root.querySelector('#cell-readout');
+    this.scorePanel = root.querySelector('#score');
 
     this.#bindControls();
     window.addEventListener('resize', () => this.#refit());
@@ -98,10 +99,70 @@ class SimulatePage {
     this.scrubber.max = String(this.player.lastTick);
     this.scrubber.value = '0';
     this.#setPlaybackEnabled(true);
+    this.#renderScore(result.assessment, result.metrics);
     this.#renderSummary(summary);
     this.#setStatus(this.#statusFor(summary));
     this.#drawFrame();
     this.player.play();
+  }
+
+  #renderScore(assessment, metrics) {
+    this.scorePanel.replaceChildren();
+    if (!assessment) {
+      this.scorePanel.hidden = true;
+      return;
+    }
+
+    const headline = document.createElement('div');
+    headline.className = `score-headline grade-${assessment.grade}`;
+    headline.innerHTML =
+      `<span class="score-grade">${assessment.grade}</span>` +
+      `<span class="score-number numeric">${assessment.score}<small>/100</small></span>`;
+    this.scorePanel.append(headline);
+
+    // Every penalty says what caused it. A score nobody can interrogate is a
+    // score nobody can act on.
+    for (const component of assessment.components) {
+      const row = document.createElement('div');
+      row.className = 'score-component';
+
+      const bar = document.createElement('div');
+      bar.className = 'score-bar';
+      const fill = document.createElement('span');
+      fill.style.width = `${(component.penalty / component.weight) * 100}%`;
+      bar.append(fill);
+
+      const label = document.createElement('div');
+      label.className = 'score-label';
+      label.innerHTML =
+        `<strong>${component.name}</strong>` +
+        `<span class="numeric">&minus;${component.penalty}</span>`;
+
+      const detail = document.createElement('p');
+      detail.className = 'score-detail';
+      detail.textContent = component.detail;
+
+      row.append(label, bar, detail);
+      this.scorePanel.append(row);
+    }
+
+    for (const reason of assessment.capped_by || []) {
+      const note = document.createElement('p');
+      note.className = 'score-cap';
+      note.textContent = `Capped: ${reason}.`;
+      this.scorePanel.append(note);
+    }
+
+    if (metrics && metrics.time.binding_constraint) {
+      const note = document.createElement('p');
+      note.className = 'score-detail';
+      note.textContent = metrics.time.binding_constraint === 'doors'
+        ? 'The doors are the limit here — a wider exit would help most.'
+        : 'Walking distance is the limit here — wider doors would change little.';
+      this.scorePanel.append(note);
+    }
+
+    this.scorePanel.hidden = false;
   }
 
   #statusFor(summary) {

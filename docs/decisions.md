@@ -98,6 +98,35 @@ the one worth shipping.
 The golden digest was regenerated twice for this day's work; both reasons are
 recorded in `tests/test_golden.py`.
 
-Open for Day 15: a single narrow exit currently trips the time, density,
-bottleneck and exit penalties at once, so a poor layout and a dangerous one can
-both grade F. Decide then whether to cap the combined penalty.
+**Day 12 — three score components, not four.** The plan had bottlenecks as a
+separate axis. A venue with one narrow door already trips the time, congestion
+and exit penalties, so a fourth would punish the same fault a fourth time and
+bunch every imperfect venue at the bottom. Bottlenecks are reported as findings
+with locations instead, which is more actionable than another subtraction. This
+resolves the double-counting concern raised before Day 1.
+
+**Day 12 — the time penalty is mostly absolute.** Measured on a crowd sweep, a
+score driven by the free-flow ratio *rose* as the crowd grew past the point
+where the doors became the binding limit, because the baseline grows with the
+crowd. It also flattered bad venues: somewhere with one narrow door has such a
+slow theoretical best that matching it looks efficient. Absolute clearing time
+now carries 25 of the 35 points and the ratio carries 10, summed rather than
+taking the worse of the two — a venue that clears in a minute is not dangerous
+merely for being inefficient about it.
+
+Calibration measured on three venues at 150 people:
+
+| Venue | Score | Time | Congestion | Exits |
+|---|---|---|---|---|
+| 9 m of exits | 69 (C) | −10 | −16 | −6 |
+| Two 1 m doors, lopsided | 61 (C) | −6 | −24 | −9 |
+| One 1 m door | 38 (F) | −7 | −40 | −15 |
+
+At 40 people all three grade A, which is correct: forty people leaving through
+one door is genuinely fine, and a score that condemned it would be measuring
+the layout rather than the risk.
+
+Open for Day 15: the free-flow ratio still treats a venue with excellent exits
+harshly, because its theoretical best is so fast that any overhead looks large.
+Its weight is capped at 10 points, which bounds the damage, but a baseline that
+accounted for how long a dense spawn area takes to disperse would be better.

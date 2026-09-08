@@ -297,3 +297,34 @@ def test_the_two_routing_models_give_different_runs(client, ascii_grid):
     assert managed["summary"]["clearing_ticks"] < naive["summary"]["clearing_ticks"]
     assert naive["summary"]["exit_usage"]["2"] == 0
     assert managed["summary"]["exit_usage"]["2"] > 0
+
+
+# Score ----------------------------------------------------------------------
+
+
+def test_a_run_comes_back_scored(client, venue_id):
+    body = run(client, venue_id, num_agents=30).get_json()
+    assert 0 <= body["assessment"]["score"] <= 100
+    assert body["assessment"]["grade"] in "ABCDF"
+    assert len(body["assessment"]["components"]) == 3
+    assert body["summary"]["score"] == body["assessment"]["score"]
+
+
+def test_metrics_come_back_with_the_run(client, venue_id):
+    metrics = run(client, venue_id, num_agents=30).get_json()["metrics"]
+    assert metrics["time"]["binding_constraint"] in ("doors", "walking")
+    assert metrics["exits"]["doors"][0]["width"] == 1
+    assert metrics["congestion"]["walkable_cells"] > 0
+
+
+def test_the_score_survives_storage(client, venue_id):
+    created = run(client, venue_id, num_agents=30).get_json()
+    fetched = client.get(f"/api/simulations/{created['id']}").get_json()
+    assert fetched["assessment"] == created["assessment"]
+    assert fetched["metrics"] == created["metrics"]
+
+
+def test_listings_carry_the_score(client, venue_id):
+    run(client, venue_id, num_agents=30)
+    listing = client.get("/api/simulations").get_json()
+    assert listing[0]["summary"]["grade"] in "ABCDF"

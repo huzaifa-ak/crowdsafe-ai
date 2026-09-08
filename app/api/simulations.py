@@ -17,6 +17,8 @@ from ..config import Config
 from ..db import repository
 from ..engine.grid import Grid
 from ..engine.layout import inspect
+from ..analysis import metrics as metrics_module
+from ..analysis.score import score as score_run
 from ..engine.simulation import SimulationConfig, simulate
 from ..engine import trace as trace_store
 from .errors import NotFoundError, ValidationError
@@ -36,7 +38,7 @@ def _json_body():
 
 
 def _summarise(result, grid: Grid, report: dict, settings: dict) -> dict:
-    """The headline numbers. Full metrics and scoring arrive on Day 12."""
+    """The headline numbers, kept flat and small for listings and the rail."""
     clearing = result.clearing_ticks
 
     # Free-flow baseline: the faster of these two is impossible to beat, so the
@@ -112,6 +114,11 @@ def run_simulation():
     blob = trace_store.encode(result.trace)
     summary["trace"] = trace_store.summarise(result.trace, blob)
 
+    measured = metrics_module.compute(grid, result, settings, report["longest_walk"])
+    assessment = score_run(measured)
+    summary["score"] = assessment["score"]
+    summary["grade"] = assessment["grade"]
+
     simulation_id = repository.create_simulation(
         venue_id=venue["id"],
         venue_snapshot=json.dumps({
@@ -123,13 +130,13 @@ def run_simulation():
     )
     repository.create_result(
         simulation_id=simulation_id,
-        metrics_json=json.dumps(summary),
+        metrics_json=json.dumps({**summary, "metrics": measured, "assessment": assessment}),
         heatmap_json=json.dumps(result.density),
         trace_blob=blob,
     )
 
     payload = _payload(simulation_id, venue, settings, summary, result.trace,
-                       density=result.density)
+                       density=result.density, metrics=measured, assessment=assessment)
     response = jsonify(payload)
     response.status_code = 201
     response.headers["Location"] = url_for("simulations.get_simulation",
@@ -145,6 +152,7 @@ def get_simulation(simulation_id: int):
 
     snapshot = json.loads(row["venue_snapshot"])
     venue = {"id": row["venue_id"], **snapshot}
+    stored = json.loads(row["metrics_json"]) if row["metrics_json"] else {}
 
     # Both are large. A caller that only wants the numbers can say so rather
     # than pulling a few hundred kilobytes it will throw away.
@@ -156,9 +164,11 @@ def get_simulation(simulation_id: int):
             row["id"],
             venue,
             json.loads(row["config_json"]),
-            json.loads(row["metrics_json"]) if row["metrics_json"] else {},
+            {k: v for k, v in stored.items() if k not in ("metrics", "assessment")},
             trace_store.decode(row["trace_blob"]) if want_trace else None,
             density=json.loads(row["heatmap_json"]) if want_density and row["heatmap_json"] else None,
+            metrics=stored.get("metrics"),
+            assessment=stored.get("assessment"),
             created_at=row["created_at"],
         )
     )
@@ -183,6 +193,7 @@ def list_simulations():
 
 def _payload(simulation_id: int, venue: dict, settings: dict, summary: dict,
              trace: list | None, density: dict | None = None,
+             metrics: dict | None = None, assessment: dict | None = None,
              created_at: str | None = None) -> dict:
     payload = {
         "id": simulation_id,
@@ -197,6 +208,10 @@ def _payload(simulation_id: int, venue: dict, settings: dict, summary: dict,
             "cells": venue.get("cells"),
         },
     }
+    if metrics is not None:
+        payload["metrics"] = metrics
+    if assessment is not None:
+        payload["assessment"] = assessment
     if trace is not None:
         payload["trace"] = trace
     if density is not None:
