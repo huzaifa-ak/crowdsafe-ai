@@ -9,6 +9,11 @@
  * Three questions, three modes. They are not interchangeable: a corner that
  * briefly packed and a corridor that stayed packed for a minute are different
  * problems, and a cell everybody walked through calmly is not a problem at all.
+ *
+ * Each mode has a floor as well as a ceiling. Colouring from zero tints every
+ * cell anyone walked through, and a large pale wash reads as danger even when
+ * the numbers are mild — the eye sees warm area, not saturation. Starting the
+ * ramp at a value that actually means something keeps the warmth honest.
  */
 
 /** Stops as [value, r, g, b]. Interpolated between, clamped outside. */
@@ -26,6 +31,10 @@ export const MODES = {
     legend: 'people per m² at the tightest moment',
     array: 'peak_density',
     unit: 'people/m²',
+    // Half the crowding threshold. Below this people are walking freely and
+    // there is nothing to report.
+    floor: (density) => density.threshold / 2,
+    marker: (density) => density.threshold,
     // Fixed to the cell capacity rather than the observed maximum: densities
     // mean something in absolute terms, and a venue that never got crowded
     // should look calm rather than being rescaled until it looks alarming.
@@ -37,6 +46,9 @@ export const MODES = {
     legend: 'ticks above the crowding threshold',
     array: 'ticks_above_threshold',
     unit: 'ticks',
+    // Any time at all over the threshold is worth showing here; that is what
+    // this array already measures.
+    floor: () => 1,
     scale: (density) => Math.max(1, ...density.ticks_above_threshold),
     format: (value) => String(Math.round(value)),
   },
@@ -45,6 +57,8 @@ export const MODES = {
     legend: 'person-ticks spent in each cell',
     array: 'visits',
     unit: 'person-ticks',
+    // A twentieth of the busiest cell. Below that is incidental footfall.
+    floor: (density) => Math.max(1, ...density.visits) / 20,
     scale: (density) => Math.max(1, ...density.visits),
     format: (value) => String(Math.round(value)),
   },
@@ -81,13 +95,15 @@ export function heatColours(density, mode) {
 
   const values = density[spec.array];
   const max = spec.scale(density);
+  const floor = spec.floor(density);
+  const span = Math.max(max - floor, 1e-6);
   const colours = new Array(values.length).fill(null);
 
   for (let i = 0; i < values.length; i += 1) {
     const value = values[i];
-    if (!value) continue;
-    const fraction = value / max;
-    colours[i] = rampColour(fraction, 0.25 + 0.6 * Math.min(1, fraction));
+    if (!value || value < floor) continue;
+    const fraction = (value - floor) / span;
+    colours[i] = rampColour(fraction, 0.3 + 0.6 * Math.min(1, fraction));
   }
   return colours;
 }
@@ -96,11 +112,25 @@ export function heatColours(density, mode) {
 export function legendStops(density, mode, count = 5) {
   const spec = MODES[mode];
   const max = spec.scale(density);
+  const floor = spec.floor(density);
+  const marker = spec.marker ? spec.marker(density) : null;
+
   return Array.from({ length: count }, (_, i) => {
     const fraction = i / (count - 1);
+    const value = floor + fraction * (max - floor);
+    const next = floor + ((i + 1) / (count - 1)) * (max - floor);
     return {
-      colour: rampColour(fraction, 0.25 + 0.6 * fraction),
-      label: spec.format(fraction * max),
+      colour: rampColour(fraction, 0.3 + 0.6 * fraction),
+      label: spec.format(value),
+      // Flags the band containing the crowding threshold, so the legend says
+      // where "busy" becomes "too busy" rather than leaving it to be guessed.
+      isThreshold: marker !== null && value <= marker && marker < next,
     };
   });
+}
+
+/** Everything below the floor is not drawn; worth saying so under the scale. */
+export function legendFloorNote(density, mode) {
+  const spec = MODES[mode];
+  return `below ${spec.format(spec.floor(density))} ${spec.unit} not shown`;
 }

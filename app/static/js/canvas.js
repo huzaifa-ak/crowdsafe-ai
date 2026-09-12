@@ -121,6 +121,21 @@ export class GridCanvas {
       this.#drawAgents(overlay.agents);
     }
 
+    // A selected bottleneck is outlined rather than filled, so the heat
+    // underneath stays readable through it.
+    if (overlay.highlight && overlay.highlight.size) {
+      ctx.save();
+      ctx.strokeStyle = PREVIEW_OUTLINE;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      for (const index of overlay.highlight) {
+        const x = index % grid.width;
+        const y = Math.floor(index / grid.width);
+        ctx.strokeRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      }
+      ctx.restore();
+    }
+
     if (overlay.hover && grid.contains(overlay.hover.x, overlay.hover.y)) {
       ctx.strokeStyle = PREVIEW_OUTLINE;
       ctx.lineWidth = 2;

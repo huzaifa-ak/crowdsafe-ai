@@ -10,7 +10,7 @@ import { api } from './api.js';
 import { GridCanvas } from './canvas.js';
 import { Grid } from './grid.js';
 import { Player } from './playback.js';
-import { MODES, heatColours, legendStops } from './heatmap.js';
+import { MODES, heatColours, legendFloorNote, legendStops } from './heatmap.js';
 
 const RATES = [1, 2, 4, 8];
 
@@ -44,6 +44,8 @@ class SimulatePage {
     this.legend = root.querySelector('#legend');
     this.cellReadout = root.querySelector('#cell-readout');
     this.scorePanel = root.querySelector('#score');
+    this.findingsPanel = root.querySelector('#findings');
+    this.highlight = null;
 
     this.#bindControls();
     window.addEventListener('resize', () => this.#refit());
@@ -100,6 +102,7 @@ class SimulatePage {
     this.scrubber.value = '0';
     this.#setPlaybackEnabled(true);
     this.#renderScore(result.assessment, result.metrics);
+    this.#renderFindings(result.bottlenecks || []);
     this.#renderSummary(summary);
     this.#setStatus(this.#statusFor(summary));
     this.#drawFrame();
@@ -213,6 +216,7 @@ class SimulatePage {
     this.canvas.render(this.grid, {
       agents: player ? player.frame() : [],
       heat: this.heat,
+      highlight: this.highlight,
       hover: this.hover,
     });
 
@@ -231,6 +235,51 @@ class SimulatePage {
       this.clock.textContent = '';
       this.canvas.render(this.grid, {});
     }
+  }
+
+  /* Findings ------------------------------------------------------------ */
+
+  #renderFindings(findings) {
+    this.findingsPanel.replaceChildren();
+    this.highlight = null;
+
+    if (!findings.length) {
+      const note = document.createElement('p');
+      note.className = 'rail-note';
+      note.textContent = 'No part of the floor stayed crowded for long enough to flag.';
+      this.findingsPanel.append(note);
+      this.findingsPanel.hidden = false;
+      return;
+    }
+
+    for (const finding of findings) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = `finding kind-${finding.kind}`;
+      item.innerHTML =
+        `<span class="finding-label">${finding.label}</span>` +
+        `<span class="finding-detail">${finding.detail}</span>` +
+        `<span class="finding-where numeric">at ${finding.pinch_at.join(', ')}</span>`;
+
+      // Hovering shows where it is; the list on its own gives coordinates, and
+      // coordinates are not a location until you can see them on the plan.
+      const cells = new Set(finding.cells);
+      item.addEventListener('pointerenter', () => {
+        this.highlight = cells;
+        this.#drawFrame();
+      });
+      item.addEventListener('pointerleave', () => {
+        this.highlight = null;
+        this.#drawFrame();
+      });
+      item.addEventListener('click', () => {
+        this.highlight = this.highlight === cells ? null : cells;
+        this.#drawFrame();
+      });
+
+      this.findingsPanel.append(item);
+    }
+    this.findingsPanel.hidden = false;
   }
 
   /* Heatmap ------------------------------------------------------------- */
@@ -259,12 +308,17 @@ class SimulatePage {
     scale.className = 'legend-scale';
     for (const stop of legendStops(this.density, this.heatMode)) {
       const swatch = document.createElement('span');
-      swatch.className = 'legend-stop';
+      swatch.className = stop.isThreshold ? 'legend-stop is-threshold' : 'legend-stop';
       swatch.style.background = stop.colour;
       swatch.textContent = stop.label;
       scale.append(swatch);
     }
     this.legend.append(scale);
+
+    const note = document.createElement('p');
+    note.className = 'legend-caption';
+    note.textContent = legendFloorNote(this.density, this.heatMode);
+    this.legend.append(note);
     this.legend.hidden = false;
   }
 

@@ -539,3 +539,33 @@ h1 {
   color: var(--alert);
   font-size: 0.78rem;
 }
+
+/* Findings ---------------------------------------------------------------- */
+
+.findings { display: flex; flex-direction: column; gap: var(--step); }
+
+.finding {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--step);
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.finding:hover { border-color: var(--ink-soft); border-left-color: var(--alert); }
+
+.finding.kind-exit_approach { border-left-color: var(--exit); }
+.finding.kind-pinch { border-left-color: var(--alert); }
+.finding.kind-open { border-left-color: var(--ink-soft); }
+
+.finding-label { font-size: 0.85rem; font-weight: 500; }
+.finding-detail { color: var(--ink-soft); font-size: 0.75rem; line-height: 1.4; }
+.finding-where { color: var(--ink-soft); font-size: 0.7rem; }
+
+.legend-stop.is-threshold { box-shadow: inset 0 -3px 0 var(--ink); font-weight: 600; }

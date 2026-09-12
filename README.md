@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 12 of 20 complete. Deployed at
+Four-week build, one developer. Day 13 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -121,6 +121,18 @@ the crowd can reach a way out:
 The trace arrives with the response, so scrubbing is entirely local and never
 waits on the network. Space plays and pauses, the arrow keys step a tick at a
 time (hold shift for ten), and the rate button cycles 1× to 8× real time.
+
+### Bottlenecks
+
+Crowded cells are grouped into contiguous regions and ranked by the time they
+cost, each with a location and a description: *"2 m gap in the centre of the
+plan — 52 m² reached 3.0 people per m² and stayed above 2.0 for up to 70
+ticks."*
+
+A region usually spans both the constriction and the crowd backed up behind it.
+The reported coordinate is the narrowest cell, not the centroid, because the
+centroid lands in the queue — which is the symptom rather than the cause.
+Hovering a finding outlines it on the plan.
 
 ### Safety score
 
@@ -186,7 +198,7 @@ can show all of them in one pass:
 |------|--------|
 | 1 | Create, edit, save and reopen a venue; validation — **done** |
 | 2 | Agents navigate obstacles to exits, live and from saved runs — **done** |
-| 3 | Congestion identified and explained |
+| 3 | Congestion identified and explained — **done** |
 | 4 | Comparison, examples, docs, deployment |
 
 Locked decisions and the reasoning behind them are in `docs/decisions.md`.

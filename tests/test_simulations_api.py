@@ -328,3 +328,32 @@ def test_listings_carry_the_score(client, venue_id):
     run(client, venue_id, num_agents=30)
     listing = client.get("/api/simulations").get_json()
     assert listing[0]["summary"]["grade"] in "ABCDF"
+
+
+def test_a_run_comes_back_with_findings(client, ascii_grid):
+    pinched = ascii_grid(
+        """
+        ######################
+        #SSSSSSSS............#
+        #SSSSSSSS............#
+        #SSSSSSSS............#
+        #SSSSSSSS............#
+        #SSSSSSSS............#
+        #########..###########
+        #####................#
+        #####................#
+        #####...............E#
+        ######################
+        """,
+        name="Pinched hall",
+    )
+    venue = client.post("/api/venues", json=pinched).get_json()["id"]
+    created = run(client, venue, num_agents=110).get_json()
+
+    assert created["bottlenecks"]
+    worst = created["bottlenecks"][0]
+    assert worst["kind"] in ("pinch", "exit_approach")
+    assert worst["label"]
+
+    fetched = client.get(f"/api/simulations/{created['id']}").get_json()
+    assert fetched["bottlenecks"] == created["bottlenecks"]
