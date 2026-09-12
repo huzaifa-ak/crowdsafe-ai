@@ -368,7 +368,7 @@ class Simulation:
 
     def _record_tick(self) -> None:
         self._record_trace()
-        self.density.record(self.occupancy, list(self.occupied))
+        self.density.record(self.occupancy, list(self.occupied), self.tick)
 
     def _record_trace(self) -> None:
         """One flat list of coordinates per tick.

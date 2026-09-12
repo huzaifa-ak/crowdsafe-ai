@@ -45,6 +45,7 @@ class SimulatePage {
     this.cellReadout = root.querySelector('#cell-readout');
     this.scorePanel = root.querySelector('#score');
     this.findingsPanel = root.querySelector('#findings');
+    this.advicePanel = root.querySelector('#advice');
     this.highlight = null;
 
     this.#bindControls();
@@ -103,6 +104,7 @@ class SimulatePage {
     this.#setPlaybackEnabled(true);
     this.#renderScore(result.assessment, result.metrics);
     this.#renderFindings(result.bottlenecks || []);
+    this.#renderAdvice(result.recommendations || []);
     this.#renderSummary(summary);
     this.#setStatus(this.#statusFor(summary));
     this.#drawFrame();
@@ -235,6 +237,52 @@ class SimulatePage {
       this.clock.textContent = '';
       this.canvas.render(this.grid, {});
     }
+  }
+
+  /* Recommendations ----------------------------------------------------- */
+
+  #renderAdvice(advice) {
+    this.advicePanel.replaceChildren();
+
+    if (!advice.length) {
+      const note = document.createElement('p');
+      note.className = 'rail-note';
+      note.textContent = 'Nothing to suggest — this run found no problem worth acting on.';
+      this.advicePanel.append(note);
+      this.advicePanel.hidden = false;
+      return;
+    }
+
+    for (const item of advice) {
+      const card = document.createElement('div');
+      card.className = `advice priority-${item.priority}`;
+
+      const title = document.createElement('p');
+      title.className = 'advice-title';
+      title.textContent = item.title;
+
+      const detail = document.createElement('p');
+      detail.className = 'advice-detail';
+      detail.textContent = item.detail;
+
+      const action = document.createElement('p');
+      action.className = 'advice-action';
+      action.textContent = item.action;
+
+      card.append(title, detail, action);
+
+      // Estimates are extrapolations from one run, not results from a second
+      // one, and are marked so rather than presented as findings.
+      if (item.estimate) {
+        const estimate = document.createElement('p');
+        estimate.className = 'advice-estimate';
+        estimate.textContent = `Estimated: ${item.estimate}`;
+        card.append(estimate);
+      }
+
+      this.advicePanel.append(card);
+    }
+    this.advicePanel.hidden = false;
   }
 
   /* Findings ------------------------------------------------------------ */

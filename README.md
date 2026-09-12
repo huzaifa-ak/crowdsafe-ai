@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 13 of 20 complete. Deployed at
+Four-week build, one developer. Day 14 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -121,6 +121,23 @@ the crowd can reach a way out:
 The trace arrives with the response, so scrubbing is entirely local and never
 waits on the network. Space plays and pauses, the arrow keys step a tick at a
 time (hold shift for ten), and the rate button cycles 1× to 8× real time.
+
+### Recommendations
+
+Nine rules read the metrics and findings and say what to change, ordered by how
+much time each would buy. Every one carries the evidence that produced it,
+because a suggestion you cannot check is a suggestion you cannot trust.
+
+Savings are labelled as estimates and derived openly — they extrapolate from
+one run rather than measuring a second one. Where an estimate would be
+guesswork the rule says what to try instead, since the app can simply run it
+and a measured answer beats a modelled one. The capacity rule offers a starting
+point to test rather than a calculated number, because crowded share does not
+scale with the crowd in any way worth extrapolating.
+
+The most important rule is a negative one: a venue limited by walking distance
+is never told to widen its doors. Recommending building work that cannot help
+is worse than recommending nothing.
 
 ### Bottlenecks
 

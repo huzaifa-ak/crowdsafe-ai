@@ -357,3 +357,26 @@ def test_a_run_comes_back_with_findings(client, ascii_grid):
 
     fetched = client.get(f"/api/simulations/{created['id']}").get_json()
     assert fetched["bottlenecks"] == created["bottlenecks"]
+
+
+def test_a_run_comes_back_with_recommendations(client, ascii_grid):
+    narrow = ascii_grid(
+        """
+        ######################
+        #SSSSSSSSSSSS........#
+        #SSSSSSSSSSSS........#
+        #SSSSSSSSSSSS........#
+        #SSSSSSSSSSSS........#
+        ##########E###########
+        """,
+        name="One narrow door",
+    )
+    venue = client.post("/api/venues", json=narrow).get_json()["id"]
+    created = run(client, venue, num_agents=120).get_json()
+
+    assert created["recommendations"]
+    top = created["recommendations"][0]
+    assert top["title"] and top["action"] and top["evidence"]
+
+    fetched = client.get(f"/api/simulations/{created['id']}").get_json()
+    assert fetched["recommendations"] == created["recommendations"]

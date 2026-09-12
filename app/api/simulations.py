@@ -19,6 +19,7 @@ from ..engine.grid import Grid
 from ..engine.layout import inspect
 from ..analysis import metrics as metrics_module
 from ..analysis.bottlenecks import detect as detect_bottlenecks
+from ..analysis.recommendations import recommend
 from ..analysis.score import score as score_run
 from ..engine.simulation import SimulationConfig, simulate
 from ..engine import trace as trace_store
@@ -117,6 +118,7 @@ def run_simulation():
 
     measured = metrics_module.compute(grid, result, settings, report["longest_walk"])
     findings = detect_bottlenecks(grid, result.density)
+    advice = recommend(grid, measured, findings, settings)
     assessment = score_run(measured)
     summary["score"] = assessment["score"]
     summary["grade"] = assessment["grade"]
@@ -135,12 +137,13 @@ def run_simulation():
         metrics_json=json.dumps({**summary, "metrics": measured, "assessment": assessment}),
         heatmap_json=json.dumps(result.density),
         bottlenecks_json=json.dumps(findings),
+        recommendations_json=json.dumps(advice),
         trace_blob=blob,
     )
 
     payload = _payload(simulation_id, venue, settings, summary, result.trace,
                        density=result.density, metrics=measured, assessment=assessment,
-                       bottlenecks=findings)
+                       bottlenecks=findings, recommendations=advice)
     response = jsonify(payload)
     response.status_code = 201
     response.headers["Location"] = url_for("simulations.get_simulation",
@@ -174,6 +177,8 @@ def get_simulation(simulation_id: int):
             metrics=stored.get("metrics"),
             assessment=stored.get("assessment"),
             bottlenecks=json.loads(row["bottlenecks_json"]) if row["bottlenecks_json"] else None,
+            recommendations=(json.loads(row["recommendations_json"])
+                             if row["recommendations_json"] else None),
             created_at=row["created_at"],
         )
     )
@@ -199,7 +204,8 @@ def list_simulations():
 def _payload(simulation_id: int, venue: dict, settings: dict, summary: dict,
              trace: list | None, density: dict | None = None,
              metrics: dict | None = None, assessment: dict | None = None,
-             bottlenecks: list | None = None, created_at: str | None = None) -> dict:
+             bottlenecks: list | None = None, recommendations: list | None = None,
+             created_at: str | None = None) -> dict:
     payload = {
         "id": simulation_id,
         "venue_id": venue.get("id"),
@@ -217,6 +223,8 @@ def _payload(simulation_id: int, venue: dict, settings: dict, summary: dict,
         payload["metrics"] = metrics
     if bottlenecks is not None:
         payload["bottlenecks"] = bottlenecks
+    if recommendations is not None:
+        payload["recommendations"] = recommendations
     if assessment is not None:
         payload["assessment"] = assessment
     if trace is not None:

@@ -42,6 +42,15 @@ class DensityAccumulator:
         self.peak_density = [0.0] * size
         self.ticks_above = [0] * size
 
+        # When each cell first and last went over the threshold. Without these
+        # the accumulator cannot tell a crowd that starts packed from a queue
+        # that builds: both look like "crowded for N ticks". Two more arrays,
+        # and the difference decides whether a finding is a bottleneck or an
+        # artefact of how many people were placed in the spawn area.
+        self.first_crowded = [-1] * size
+        self.last_crowded = [-1] * size
+        self.tick = 0
+
         # Walkable cells within each cell's 3x3 window, precomputed once. A
         # window against a wall covers fewer cells, and dividing by 9 there
         # would understate the density in exactly the corners where crowding
@@ -59,7 +68,7 @@ class DensityAccumulator:
                 self._window.append(cells)
                 self._window_size.append(len(cells))
 
-    def record(self, occupancy: list[int], occupied: list[int]) -> None:
+    def record(self, occupancy: list[int], occupied: list[int], tick: int = 0) -> None:
         """Fold one tick into the accumulators.
 
         `occupied` is the indices of cells holding at least one agent — the
@@ -85,6 +94,9 @@ class DensityAccumulator:
                 peak[index] = density
             if density >= DENSITY_THRESHOLD:
                 above[index] += 1
+                if self.first_crowded[index] < 0:
+                    self.first_crowded[index] = tick
+                self.last_crowded[index] = tick
 
     def as_dict(self) -> dict:
         """Flat arrays in the same row-major order as the cell string, so the
@@ -95,5 +107,7 @@ class DensityAccumulator:
             "visits": self.visits,
             "peak_density": [round(v, 2) for v in self.peak_density],
             "ticks_above_threshold": self.ticks_above,
+            "first_crowded_tick": self.first_crowded,
+            "last_crowded_tick": self.last_crowded,
             "threshold": DENSITY_THRESHOLD,
         }
