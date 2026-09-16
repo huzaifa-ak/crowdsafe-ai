@@ -1,6 +1,8 @@
 """Page routes render. The editor's behaviour lives in JavaScript; these tests
 only check that the shell it needs is present and correctly parameterised."""
 
+import re
+
 
 def test_editor_page_renders_a_blank_plan(client):
     response = client.get("/editor")
@@ -102,3 +104,18 @@ def test_simulate_page_offers_every_heatmap_mode(client):
         assert f'value="{mode}"' in body
     assert 'id="legend"' in body
     assert 'id="cell-readout"' in body
+
+
+def test_editor_links_to_running_a_saved_venue(client):
+    venue = _create_venue(client)
+    body = client.get(f"/editor/{venue['id']}").data.decode()
+    assert f'/simulate/{venue["id"]}' in body
+    assert 'id="run-link"' in body
+
+
+def test_a_blank_editor_hides_the_run_link(client):
+    """Nothing to run until it has been saved, so the link starts hidden."""
+    body = client.get("/editor").data.decode()
+    tag = re.search(r'<a[^>]*id="run-link".*?>', body, re.S).group(0)
+    assert "hidden" in tag
+    assert "/simulate/" not in tag

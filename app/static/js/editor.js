@@ -119,6 +119,7 @@ class Editor {
     this.saveButton = this.root.querySelector('#save');
     this.statusText = this.root.querySelector('#save-status');
     this.errorList = this.root.querySelector('#save-errors');
+    this.runLink = document.querySelector('#run-link');
 
     this.saveButton.addEventListener('click', () => this.save());
     this.nameInput.addEventListener('input', () => this.#markDirty());
@@ -171,6 +172,13 @@ class Editor {
       /* Move the address to the venue's own URL so a refresh reopens what was
        * just saved instead of dropping the person on a blank plan. */
       if (isNew) window.history.replaceState({}, '', `/editor/${saved.id}`);
+
+      // A venue can only be run once it has been saved, so the link appears
+      // at the moment that becomes true rather than sitting there dead.
+      if (this.runLink) {
+        this.runLink.href = `/simulate/${saved.id}`;
+        this.runLink.hidden = false;
+      }
     } catch (error) {
       this.#setStatus(error.message);
       this.#showErrors(error.details || []);

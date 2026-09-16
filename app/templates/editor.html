@@ -5,6 +5,11 @@
 {% block main_class %}editor-shell{% endblock %}
 
 {% block nav %}
+  {# Hidden until the venue has an id, because there is nothing to run yet.
+     editor.js reveals it after the first save. #}
+  <a class="action action-primary" id="run-link"
+     href="{{ url_for('pages.simulate_venue', venue_id=venue.id) if venue.id else '#' }}"
+     {% if not venue.id %}hidden{% endif %}>Run simulation</a>
   <a class="action" href="{{ url_for('pages.dashboard') }}">Back to venues</a>
 {% endblock %}
 
