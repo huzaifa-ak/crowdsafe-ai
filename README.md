@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 16 of 20 complete. Deployed at
+Four-week build, one developer. Day 17 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -123,6 +123,26 @@ the crowd can reach a way out:
 The trace arrives with the response, so scrubbing is entirely local and never
 waits on the network. Space plays and pauses, the arrow keys step a tick at a
 time (hold shift for ten), and the rate button cycles 1× to 8× real time.
+
+### Example venues
+
+Four plans in `app/seed/venues/`, loaded on boot when the database is empty, so
+a fresh deploy is never a blank dashboard. Seeding only runs when there are no
+venues, so a venue someone drew is never overwritten and a restart never
+produces duplicates. Set `SEED_EXAMPLES=0` to turn it off.
+
+At the default 150 people, each demonstrates something different:
+
+| Venue | Grade | What it shows |
+|---|---|---|
+| Community hall | B | A room that works — nothing serious to fix |
+| Warehouse with racking | B | 8 m of exit that does not help, because the constraint is upstream |
+| Foyer and hall | D | A 1 m corridor, and an entrance nobody is leaving through |
+| One way out | D | The same room as the hall, behind a single 1 m door |
+
+They are ASCII plans rather than JSON, because the point of an example is that
+a person can read it and a grid of digits is not readable. `to_ascii()` turns a
+venue drawn in the editor back into one.
 
 ### Comparison
 

@@ -1,0 +1,12 @@
+# Community hall
+# A room that works. Two doors on opposite walls, a clear floor, and a crowd
+# that fits. Useful as the thing other examples are compared against.
+##############################
+#............................#
+#..SSSSSSSSSS..SSSSSSSSSS....#
+#..SSSSSSSSSS..SSSSSSSSSS....#
+#..SSSSSSSSSS..SSSSSSSSSS....#
+#..SSSSSSSSSS..SSSSSSSSSS....#
+#............................#
+#............................#
+EEEE####################EEEEE#

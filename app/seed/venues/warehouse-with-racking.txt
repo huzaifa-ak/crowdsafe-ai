@@ -1,0 +1,13 @@
+# Warehouse with racking
+# Two runs of racking span the floor between the crowd and the doors, leaving
+# three narrow gaps. There is more than enough exit width here — 8 m of door —
+# and it does not help, because the constraint is upstream of it.
+##############################
+#SSSSSSSSSSSSSSSSSSSSSSSSSSSS#
+#SSSSSSSSSSSSSSSSSSSSSSSSSSSS#
+#SSSSSSSSSSSSSSSSSSSSSSSSSSSS#
+#............................#
+#####.###########.########.###
+#............................#
+#............................#
+#EEEE##################EEEE###

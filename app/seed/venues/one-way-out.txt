@@ -1,0 +1,12 @@
+# One way out
+# The same room and the same crowd, behind a single 1 m door. Nothing about the
+# floor has changed; the exits alone take it from a B to an F.
+##############################
+#............................#
+#..SSSSSSSSSS..SSSSSSSSSS....#
+#..SSSSSSSSSS..SSSSSSSSSS....#
+#..SSSSSSSSSS..SSSSSSSSSS....#
+#..SSSSSSSSSS..SSSSSSSSSS....#
+#............................#
+#............................#
+##############E###############

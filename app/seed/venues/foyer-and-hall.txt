@@ -1,0 +1,12 @@
+# Foyer and hall
+# Two spaces joined by a corridor, with the exits all on the foyer side. The
+# crowd in the hall has a long walk before it can start queueing.
+##############################
+#SSSSSSSSSSSS#...............#
+#SSSSSSSSSSSS#...............#
+#SSSSSSSSSSSS#...............#
+#SSSSSSSSSSSS.......N........#
+#SSSSSSSSSSSS#...............#
+#SSSSSSSSSSSS#...............#
+#############................#
+#############EEEE#######EEE###

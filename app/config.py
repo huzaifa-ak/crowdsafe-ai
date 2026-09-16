@@ -47,6 +47,11 @@ class Config:
     MAX_SPEED = 1.0  # credit is capped at 1 cell/tick, so >1.0 has no effect
     DEFAULT_SEED = 42
 
+    # Example venues are loaded on boot when the database is empty, so a fresh
+    # deploy is never a blank dashboard. Off in tests, which assert on empty
+    # databases.
+    SEED_EXAMPLES = os.environ.get("SEED_EXAMPLES", "1") != "0"
+
     MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # 1 MB request body cap
 
 
@@ -58,3 +63,4 @@ class TestConfig(Config):
     """
 
     TESTING = True
+    SEED_EXAMPLES = False

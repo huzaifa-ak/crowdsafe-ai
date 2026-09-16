@@ -33,6 +33,10 @@ def create_app(config_object=Config, **overrides) -> Flask:
     app.register_blueprint(comparisons.bp)
     app.register_blueprint(pages.bp)
 
+    if app.config.get("SEED_EXAMPLES"):
+        from .seed import seed_if_empty
+        seed_if_empty(app)
+
     compress.init_app(app)
 
     @app.get("/healthz")
