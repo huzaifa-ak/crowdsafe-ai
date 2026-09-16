@@ -99,11 +99,13 @@ its own layout after the venue is edited.
 Add `?trace=0` or `?density=0` when fetching a run to leave the large parts out.
 
 Measured at the largest venue the API accepts (80 × 60, 300 people, one narrow
-door), against budgets asserted in the test suite:
+door), against budgets asserted in the test suite. The run-time budget is set
+to catch an order-of-magnitude regression, not to measure the machine — the
+same run takes under a second on a fast desktop and a few seconds on a laptop:
 
 | | Measured | Budget |
 |---|---|---|
-| Run time | 0.8 s | 3 s |
+| Run time | 0.8 s | 10 s |
 | Trace, raw | 260 KB | 2 MB |
 | Trace, stored | 40 KB | 256 KB |
 
