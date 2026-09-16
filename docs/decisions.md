@@ -126,7 +126,52 @@ At 40 people all three grade A, which is correct: forty people leaving through
 one door is genuinely fine, and a score that condemned it would be measuring
 the layout rather than the risk.
 
-Open for Day 15: the free-flow ratio still treats a venue with excellent exits
-harshly, because its theoretical best is so fast that any overhead looks large.
-Its weight is capped at 10 points, which bounds the damage, but a baseline that
-accounted for how long a dense spawn area takes to disperse would be better.
+**Day 15 — tuning against a reference set.** Eight venues spanning obviously
+fine to obviously dangerous, each with the grade band a person would give it,
+in `tests/reference_venues.py`. `python calibrate.py` prints the table and
+`tests/test_calibration.py` asserts the bands hold. Thresholds are tuned
+against this set rather than by feel, and a change that is locally sensible but
+globally wrong now fails a test.
+
+Two changes came out of it.
+
+*Placement density is excluded from congestion, but only where it disperses.*
+A hall with generous exits was being marked down for having a crowd in it: the
+spawn blocks are dense at tick 0 by construction, and that was counted as
+congestion. Excluding spawn cells crowded from the first tick fixed that hall
+and broke the narrow-door venue, which jumped from D to B — because there the
+queue *is* the spawn area, so the exclusion removed the real congestion.
+Persistence separates them: crowding that clears within 35% of the run is
+people spreading out; crowding that outlasts that is a queue that happens to
+start where people were standing. `placed_dense_cells` reports how many cells
+were excluded, so the judgement can be checked.
+
+*The time thresholds were in the wrong range.* At 60–240 s the absolute term
+never exceeded 10 of its 25 points across the whole reference set, because no
+venue of this size came close to four minutes; congestion was carrying the
+score almost alone. 45–180 s matches the two-to-three minutes assembly-building
+guidance talks about and the range these venues actually occupy.
+
+Final calibration:
+
+| Venue | People | Clears | Score |
+|---|---|---|---|
+| Small room, small crowd | 20 | 15 s | 95 (A) |
+| Hall with generous exits | 120 | 27 s | 82 (B) |
+| Long thin venue | 60 | 57 s | 82 (B) |
+| Hall at capacity | 200 | 34 s | 71 (B) |
+| Lopsided doors | 120 | 50 s | 71 (B) |
+| Pinched corridor | 110 | 95 s | 61 (C) |
+| One narrow door | 120 | 84 s | 44 (D) |
+| Part of the floor sealed off | 45 | 19 s | 35 (F) |
+
+The bands are wide on purpose. The claim is not that a venue scores 71; it is
+that the ordering is right and nothing lands in the wrong half of the scale. A
+score precise enough to defend to the decimal would be a score fitted to eight
+layouts rather than to reality.
+
+*Closed:* the free-flow ratio does still treat a venue with excellent exits
+harshly — the hall with generous exits shows 2.92x — but its weight is 10
+points and the reference set confirms the ordering survives it. Left as is
+rather than adding a spawn-dispersal term to the baseline, which would be more
+machinery for a bounded problem.

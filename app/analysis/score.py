@@ -20,12 +20,13 @@ TIME_WEIGHT = 35
 CONGESTION_WEIGHT = 40
 EXIT_WEIGHT = 25
 
-# Time. Real guidance for assembly buildings talks in terms of a few minutes to
-# clear; 60 s is comfortable and past 240 s is a problem regardless of why.
-# This carries most of the weight, because how long people are actually stuck
-# inside is the thing that matters.
-COMFORTABLE_SECONDS = 60
-ALARMING_SECONDS = 240
+# Time. Guidance for assembly buildings is generally couched in two to three
+# minutes to clear. The original 60–240 s range left this term barely engaged:
+# across the reference venues it never exceeded 10 of its 25 points, because
+# none of them came close to four minutes. 45–180 s spans the range real
+# venues of this size actually occupy.
+COMFORTABLE_SECONDS = 45
+ALARMING_SECONDS = 180
 ABSOLUTE_SHARE = 25
 
 # Efficiency, as a secondary term. Some overhead above free flow is

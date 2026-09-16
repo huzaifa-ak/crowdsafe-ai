@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 14 of 20 complete. Deployed at
+Four-week build, one developer. Day 15 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -121,6 +121,14 @@ the crowd can reach a way out:
 The trace arrives with the response, so scrubbing is entirely local and never
 waits on the network. Space plays and pauses, the arrow keys step a tick at a
 time (hold shift for ten), and the rate button cycles 1× to 8× real time.
+
+### Calibration
+
+`python calibrate.py` scores eight reference venues spanning obviously fine to
+obviously dangerous and prints the table, with the grade band a person would
+give each one. The thresholds in `app/analysis/score.py` are tuned against that
+set, and `tests/test_calibration.py` fails if any venue leaves its band — so a
+change that looks reasonable in isolation but breaks the ranking gets caught.
 
 ### Recommendations
 

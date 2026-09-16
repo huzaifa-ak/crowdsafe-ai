@@ -8,10 +8,14 @@ touching the arithmetic.
 All times are in ticks unless a field says seconds.
 """
 
-from ..cells import WALKABLE
+from ..cells import SPAWN, WALKABLE
 from ..config import Config
 from ..engine.density import DENSITY_THRESHOLD
 from ..engine.grid import Grid
+
+# How much of a run's length crowding may last and still count as the crowd
+# dispersing from where it was placed rather than queueing.
+DISPERSAL_FRACTION = 0.35
 
 
 def compute(grid: Grid, result, settings: dict, longest_walk: int | None) -> dict:
@@ -21,7 +25,7 @@ def compute(grid: Grid, result, settings: dict, longest_walk: int | None) -> dic
     return {
         "crowd": _crowd(result),
         "time": _time(grid, result, settings, longest_walk),
-        "congestion": _congestion(result, walkable),
+        "congestion": _congestion(grid, result, walkable),
         "exits": _exits(grid, result, settings),
         "trace": {"ticks": len(result.trace)},
     }
@@ -69,19 +73,47 @@ def _time(grid: Grid, result, settings: dict, longest_walk: int | None) -> dict:
     }
 
 
-def _congestion(result, walkable: int) -> dict:
+def _congestion(grid: Grid, result, walkable: int) -> dict:
     """How much of the room got tight, and for how long.
 
     Share and duration are kept apart on purpose. A quarter of the floor
     briefly touching the threshold is a different venue from one cell that
     stayed jammed for a minute, and averaging them together would hide both.
+
+    Crowding in the spawn area that is present from the first tick *and
+    disperses* is excluded: that is the density the crowd was placed at, not
+    congestion the venue caused, and counting it penalises a well laid out hall
+    for having a crowd in it.
+
+    Persistence is what separates the two, and it has to be part of the test.
+    A spawn cell that is packed at tick 0 and clear a few seconds later is
+    people spreading out. A spawn cell that is packed at tick 0 and still
+    packed two thirds of the way through the run is a queue that happens to
+    start where people were standing — which is exactly what a hall with one
+    narrow door looks like. Excluding on spawn membership alone rated such a
+    venue a B.
+
+    The count of excluded cells is reported, so the exclusion can be checked
+    rather than taken on trust.
     """
     density = result.density
     peak = density["peak_density"]
     above = density["ticks_above_threshold"]
+    first = density.get("first_crowded_tick") or [-1] * len(above)
+    last = density.get("last_crowded_tick") or [-1] * len(above)
+    run_ticks = max(1, len(result.trace) - 1)
 
-    crowded_cells = sum(1 for ticks in above if ticks)
-    total_crowded_ticks = sum(above)
+    placed = {
+        i for i, ticks in enumerate(above)
+        if ticks
+        and grid.cells[i] == SPAWN
+        and 0 <= first[i] <= 1
+        and (last[i] - first[i]) <= DISPERSAL_FRACTION * run_ticks
+    }
+
+    crowded_indices = [i for i, ticks in enumerate(above) if ticks and i not in placed]
+    crowded_cells = len(crowded_indices)
+    total_crowded_ticks = sum(above[i] for i in crowded_indices)
     ticks = max(1, len(result.trace) - 1)
 
     return {
@@ -90,7 +122,9 @@ def _congestion(result, walkable: int) -> dict:
         "crowded_cells": crowded_cells,
         "walkable_cells": walkable,
         "crowded_share": round(crowded_cells / walkable, 4) if walkable else 0.0,
-        "longest_crowded_spell": max(above) if above else 0,
+        "longest_crowded_spell": max((above[i] for i in crowded_indices), default=0),
+        # Excluded as starting density, kept visible rather than silently dropped.
+        "placed_dense_cells": len(placed),
         # Cell-ticks over the threshold as a fraction of every cell-tick
         # available. Low share with a high figure here means one place stayed
         # bad rather than many places briefly touching it.
