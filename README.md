@@ -61,7 +61,7 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 15 of 20 complete. Deployed at
+Four-week build, one developer. Day 16 of 20 complete. Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -123,6 +123,23 @@ the crowd can reach a way out:
 The trace arrives with the response, so scrubbing is entirely local and never
 waits on the network. Space plays and pauses, the arrow keys step a tick at a
 time (hold shift for ten), and the rate button cycles 1× to 8× real time.
+
+### Comparison
+
+`/compare` puts two runs side by side: both plans with their heatmaps, a table
+of deltas, and which bottlenecks went away, appeared, or are still there.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `POST` | `/api/comparisons`      | Compare two stored runs and save the result |
+| `GET`  | `/api/comparisons/{id}` | Fetch a saved comparison |
+| `GET`  | `/api/comparisons`      | List saved comparisons |
+
+The first thing a comparison does is check the two runs are comparable at all.
+Different crowd sizes, seeds or routing models differ for reasons that have
+nothing to do with the layout, and a table of deltas presented without that
+caveat is worse than no table — it looks like evidence. Mismatches are listed
+above the numbers, not below them.
 
 ### Calibration
 

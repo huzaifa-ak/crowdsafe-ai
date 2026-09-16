@@ -125,3 +125,51 @@ def list_simulations(venue_id: int | None = None) -> list[dict]:
         params = (venue_id,)
     sql += " ORDER BY s.id DESC"
     return [dict(row) for row in get_db().execute(sql, params).fetchall()]
+
+
+# Comparisons ----------------------------------------------------------------
+
+
+def create_comparison(name: str | None, baseline_result_id: int, variant_result_id: int,
+                      summary_json: str) -> int:
+    db = get_db()
+    cursor = db.execute(
+        """
+        INSERT INTO comparisons (name, baseline_result_id, variant_result_id, summary_json)
+        VALUES (?, ?, ?, ?)
+        """,
+        (name, baseline_result_id, variant_result_id, summary_json),
+    )
+    db.commit()
+    return cursor.lastrowid
+
+
+def get_comparison(comparison_id: int) -> dict | None:
+    row = get_db().execute(
+        "SELECT id, name, baseline_result_id, variant_result_id, summary_json, created_at "
+        "FROM comparisons WHERE id = ?",
+        (comparison_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def list_comparisons() -> list[dict]:
+    rows = get_db().execute(
+        "SELECT id, name, baseline_result_id, variant_result_id, created_at "
+        "FROM comparisons ORDER BY id DESC"
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def result_id_for_simulation(simulation_id: int) -> int | None:
+    row = get_db().execute(
+        "SELECT id FROM results WHERE simulation_id = ?", (simulation_id,)
+    ).fetchone()
+    return row["id"] if row else None
+
+
+def simulation_id_for_result(result_id: int) -> int | None:
+    row = get_db().execute(
+        "SELECT simulation_id FROM results WHERE id = ?", (result_id,)
+    ).fetchone()
+    return row["simulation_id"] if row else None

@@ -70,5 +70,15 @@ export const api = {
 
   runSimulation: (venueId, config) =>
     request('POST', '/api/simulations', { venue_id: venueId, config }),
-  getSimulation: (id) => request('GET', `/api/simulations/${id}`),
+  getSimulation: (id, { trace = true, density = true } = {}) =>
+    request('GET', `/api/simulations/${id}?trace=${trace ? 1 : 0}&density=${density ? 1 : 0}`),
+  listSimulations: (venueId) =>
+    request('GET', venueId ? `/api/simulations?venue_id=${venueId}` : '/api/simulations'),
+
+  createComparison: (baselineId, variantId, name) =>
+    request('POST', '/api/comparisons', {
+      baseline_simulation_id: baselineId,
+      variant_simulation_id: variantId,
+      name,
+    }),
 };

@@ -40,6 +40,13 @@ def simulate_venue(venue_id: int):
     return render_template("simulate.html", venue=venue)
 
 
+@bp.get("/compare")
+def compare():
+    """Two runs side by side. The runs are listed server-side so the page has
+    something to choose from before any JavaScript runs."""
+    return render_template("compare.html", runs=repository.list_simulations())
+
+
 @bp.get("/editor/<int:venue_id>")
 def edit_venue(venue_id: int):
     """An existing venue. The grid is rendered into the page rather than fetched,

@@ -151,8 +151,13 @@ def run_simulation():
     return response
 
 
-@bp.get("/<int:simulation_id>")
-def get_simulation(simulation_id: int):
+def load_run(simulation_id: int, with_trace: bool = True,
+             with_density: bool = True) -> dict:
+    """A stored run, assembled the same way the endpoint returns it.
+
+    Shared with comparisons so the two can never drift apart in what they mean
+    by "a run".
+    """
     row = repository.get_simulation(simulation_id)
     if row is None:
         raise NotFoundError(f"No simulation with id {simulation_id}.")
@@ -161,27 +166,31 @@ def get_simulation(simulation_id: int):
     venue = {"id": row["venue_id"], **snapshot}
     stored = json.loads(row["metrics_json"]) if row["metrics_json"] else {}
 
+    return _payload(
+        row["id"],
+        venue,
+        json.loads(row["config_json"]),
+        {k: v for k, v in stored.items() if k not in ("metrics", "assessment")},
+        trace_store.decode(row["trace_blob"]) if with_trace else None,
+        density=json.loads(row["heatmap_json"]) if with_density and row["heatmap_json"] else None,
+        metrics=stored.get("metrics"),
+        assessment=stored.get("assessment"),
+        bottlenecks=json.loads(row["bottlenecks_json"]) if row["bottlenecks_json"] else None,
+        recommendations=(json.loads(row["recommendations_json"])
+                         if row["recommendations_json"] else None),
+        created_at=row["created_at"],
+    )
+
+
+@bp.get("/<int:simulation_id>")
+def get_simulation(simulation_id: int):
     # Both are large. A caller that only wants the numbers can say so rather
     # than pulling a few hundred kilobytes it will throw away.
-    want_trace = request.args.get("trace", "1") != "0"
-    want_density = request.args.get("density", "1") != "0"
-
-    return jsonify(
-        _payload(
-            row["id"],
-            venue,
-            json.loads(row["config_json"]),
-            {k: v for k, v in stored.items() if k not in ("metrics", "assessment")},
-            trace_store.decode(row["trace_blob"]) if want_trace else None,
-            density=json.loads(row["heatmap_json"]) if want_density and row["heatmap_json"] else None,
-            metrics=stored.get("metrics"),
-            assessment=stored.get("assessment"),
-            bottlenecks=json.loads(row["bottlenecks_json"]) if row["bottlenecks_json"] else None,
-            recommendations=(json.loads(row["recommendations_json"])
-                             if row["recommendations_json"] else None),
-            created_at=row["created_at"],
-        )
-    )
+    return jsonify(load_run(
+        simulation_id,
+        with_trace=request.args.get("trace", "1") != "0",
+        with_density=request.args.get("density", "1") != "0",
+    ))
 
 
 @bp.get("")

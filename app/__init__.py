@@ -21,7 +21,7 @@ def create_app(config_object=Config, **overrides) -> Flask:
     app.json.sort_keys = False  # keep id/name first in responses, not alphabetical
 
     from . import db
-    from .api import errors, simulations, venues
+    from .api import comparisons, errors, simulations, venues
     from . import pages
 
     db.register(app)
@@ -30,6 +30,7 @@ def create_app(config_object=Config, **overrides) -> Flask:
     errors.register(app)
     app.register_blueprint(venues.bp)
     app.register_blueprint(simulations.bp)
+    app.register_blueprint(comparisons.bp)
     app.register_blueprint(pages.bp)
 
     compress.init_app(app)

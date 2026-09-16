@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Compare · CrowdSafe AI{% endblock %}
+
+{% block nav %}
+  <a class="action" href="{{ url_for('pages.dashboard') }}">Back to venues</a>
+{% endblock %}
+
+{% block content %}
+<div id="compare-page">
+  <h1>Compare two runs</h1>
+  <p class="lede">
+    The same crowd through two layouts is the only honest way to answer whether
+    a change helps. Pick a run from before the change and one from after.
+  </p>
+
+  {% if runs|length < 2 %}
+    <div class="plan-field">
+      <div class="plan-field-copy">
+        <h2>Not enough runs yet</h2>
+        <p>
+          Run a venue, change something about it, then run it again. Both runs
+          need the same crowd size and seed for the difference to mean anything.
+        </p>
+        <a class="action action-primary" href="{{ url_for('pages.dashboard') }}">Back to venues</a>
+      </div>
+    </div>
+  {% else %}
+    <div class="compare-picker">
+      <label for="baseline">Before</label>
+      <select id="baseline">
+        {% for run in runs %}
+          <option value="{{ run.id }}">
+            #{{ run.id }} · venue {{ run.venue_id }} · seed {{ run.seed }}
+            {%- if run.summary %} · {{ run.summary.grade }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label for="variant">After</label>
+      <select id="variant">
+        {% for run in runs %}
+          <option value="{{ run.id }}" {% if loop.first and runs|length > 1 %}{% endif %}>
+            #{{ run.id }} · venue {{ run.venue_id }} · seed {{ run.seed }}
+            {%- if run.summary %} · {{ run.summary.grade }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+
+      <button type="button" class="action action-primary" id="compare">Compare</button>
+      <span class="rail-note" id="compare-status"></span>
+    </div>
+
+    <p class="verdict" id="verdict" hidden></p>
+    <ul class="error-list" id="warnings" hidden></ul>
+
+    <div class="compare-plans">
+      <figure>
+        <canvas id="baseline-canvas"></canvas>
+        <figcaption>Before &middot; <span id="baseline-caption" class="numeric"></span></figcaption>
+      </figure>
+      <figure>
+        <canvas id="variant-canvas"></canvas>
+        <figcaption>After &middot; <span id="variant-caption" class="numeric"></span></figcaption>
+      </figure>
+    </div>
+
+    <table class="venue-table" id="changes">
+      <thead>
+        <tr>
+          <th scope="col">Measure</th>
+          <th scope="col" class="numeric">Before</th>
+          <th scope="col" class="numeric">After</th>
+          <th scope="col" class="numeric">Change</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="finding-changes" id="finding-changes" hidden></div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/compare.js') }}"></script>
+{% endblock %}
