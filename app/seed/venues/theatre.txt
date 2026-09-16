@@ -1,0 +1,24 @@
+# Theatre
+# A stage, an orchestra block and a balcony, with aisles between them.
+# The stage is solid, so the whole audience leaves by the back and the
+# side doors.
+##############################
+#.......BBBBBBBBBBBBBB.......#
+#.......BBBBBBBBBBBBBB.......#
+#............................#
+#............................#
+#..SSSSSSS.SSSSSSSS.SSSSSSS..#
+E..SSSSSSS.SSSSSSSS.SSSSSSS..E
+#..SSSSSSS.SSSSSSSS.SSSSSSS..#
+#..SSSSSSS.SSSSSSSS.SSSSSSS..#
+#............................#
+#............................#
+#............................#
+#..SSSSSSS.SSSSSSSS.SSSSSSS..#
+#..SSSSSSS.SSSSSSSS.SSSSSSS..#
+#..SSSSSSS.SSSSSSSS.SSSSSSS..#
+#............................#
+#............................#
+#............................#
+#............................#
+##########EE######EE##########

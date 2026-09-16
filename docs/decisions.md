@@ -170,8 +170,39 @@ that the ordering is right and nothing lands in the wrong half of the scale. A
 score precise enough to defend to the decimal would be a score fitted to eight
 layouts rather than to reality.
 
-*Closed:* the free-flow ratio does still treat a venue with excellent exits
-harshly — the hall with generous exits shows 2.92x — but its weight is 10
-points and the reference set confirms the ordering survives it. Left as is
-rather than adding a spawn-dispersal term to the baseline, which would be more
-machinery for a bounded problem.
+**Day 17 — the free-flow ratio is no longer scored.** It remains a reported
+metric, and a useful one: it says how much of the clearing time was congestion
+rather than walking. As a *penalty* it moves the wrong way whenever a venue is
+improved, because widening a door makes the theoretical best faster and the
+ratio worse.
+
+Three measured cases, all the same fault:
+
+- a crowd sweep where the score rose as people were added, because the baseline
+  grows with the crowd once the doors bind (Day 12);
+- a comparison where doubling the exit width improved every other measure and
+  the ratio got 33% worse (Day 16);
+- an arena that scored 88 with four gates and 99 with two of them bricked up,
+  having taken six seconds longer to clear (Day 17).
+
+Weighting it down to 10 points bounded the damage without removing it, and the
+arena case shows that was not enough: 10 points is plenty to invert an ordering
+between two venues that both clear comfortably. Time is now absolute only, at
+the full 35 points.
+
+The cost is real and worth naming. Absolute time cannot tell a venue that is
+slow because it is enormous from one that is slow because it is badly laid out
+— that was the ratio's job. Congestion and exits now carry the layout question
+between them. What absolute time can do is never call an improvement a
+regression.
+
+One reference band moved as a result. *Long thin venue* was B–D and is now A–C:
+sixty people out in under a minute is a safe evacuation, and the long walk to
+the far corner is a recommendation rather than a penalty. The original band was
+set while the ratio was inflating the time penalty on any venue with generous
+exits.
+
+**Day 17 — exit imbalance is scaled by how hard the doors are working.** Same
+arena case: four gates used unevenly scored worse than two used evenly. An
+uneven split only costs anything when the doors are near their limit, so the
+balance penalty is now multiplied by the door pressure.

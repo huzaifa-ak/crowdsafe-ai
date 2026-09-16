@@ -105,9 +105,14 @@ SCENARIOS = [
     },
     {
         "name": "Long thin venue",
-        "why": "Walking distance is the limit; the doors are fine.",
+        "why": ("Walking distance is the limit; the doors are fine. Sixty people "
+                "out in under a minute is a safe evacuation, so this grades well "
+                "even though the far corner is a long way from a door — that is a "
+                "recommendation, not a penalty. The band was originally B–D, set "
+                "when the free-flow ratio was still scored and was inflating the "
+                "time penalty on any venue with generous exits."),
         "agents": 60,
-        "expect": ("B", "D"),
+        "expect": ("A", "C"),
         "layout": """
             ##############################
             #SSSSSS......................#

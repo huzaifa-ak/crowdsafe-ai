@@ -1,0 +1,18 @@
+# Nightclub
+# A packed floor, a bar taking up one end, and a fire exit reached down
+# a one-metre gap behind it. The fire exit is present, signed and, for
+# most of the room, not worth walking to.
+####################
+#..................#
+#.SSSSSSSS.........#
+#.SSSSSSSS.........#
+#.SSSSSSSS.........#
+#.SSSSSSSS...BBBBBB#
+#............BBBBBB#
+#............BBBBBB#
+#.SSSSSSSS...BBBBBB#
+#.SSSSSSSS.........#
+#.SSSSSSSS...BBBBBB#
+#............BBBBBB#
+#..................E
+#####EE#############

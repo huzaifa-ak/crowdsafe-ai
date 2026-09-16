@@ -1,0 +1,28 @@
+# Stadium
+# Two tiers around a pitch, reached only through vomitories. There is
+# plenty of exit width on the outside of the building and very little
+# between the crowd and it.
+################EEEE################
+#..................................#
+#............SSSSSSSSSS............#
+#..................................#
+#........########.#########........#
+#..................................#
+#............SSSSSSSSSS............#
+#............SSSSSSSSSS............#
+#..................................#
+#....#......BBBBBBBBBBBB......#....#
+E.SS.#.SS...BBBBBBBBBBBB...SS.#.SS.E
+E.SS...SS...BBBBBBBBBBBB...SS...SS.E
+E.SS.#.SS...BBBBBBBBBBBB...SS.#.SS.E
+E.SS.#.SS...BBBBBBBBBBBB...SS.#.SS.E
+#....#......BBBBBBBBBBBB......#....#
+#..................................#
+#............SSSSSSSSSS............#
+#............SSSSSSSSSS............#
+#..................................#
+#........########.#########........#
+#..................................#
+#............SSSSSSSSSS............#
+#..................................#
+################EEEE################

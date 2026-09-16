@@ -135,10 +135,10 @@ At the default 150 people, each demonstrates something different:
 
 | Venue | Grade | What it shows |
 |---|---|---|
-| Community hall | B | A room that works — nothing serious to fix |
-| Warehouse with racking | B | 8 m of exit that does not help, because the constraint is upstream |
-| Foyer and hall | D | A 1 m corridor, and an entrance nobody is leaving through |
-| One way out | D | The same room as the hall, behind a single 1 m door |
+| Arena | A | Four stands round a solid court, so the concourse is a ring |
+| Theatre | A | Stage, orchestra and balcony, with aisles between them |
+| Stadium | A | Two tiers reached only through vomitories — the pinch is inside, not at the doors |
+| Nightclub | B | A packed floor and a fire exit down a 1 m gap behind the bar |
 
 They are ASCII plans rather than JSON, because the point of an example is that
 a person can read it and a grid of digits is not readable. `to_ascii()` turns a
@@ -205,18 +205,24 @@ penalties from a clean sheet. Every penalty names what caused it.
 
 | Component | Weight | Measures |
 |---|---|---|
-| Time | 35 | How long it took (25) plus how wasteful that was (10) |
+| Time | 35 | How long it took, in seconds |
 | Congestion | 40 | How much of the floor got tight, and for how long |
 | Exits | 25 | Whether there is enough door, and whether it is used evenly |
 
 Anyone left inside caps the score at 35 regardless of the rest.
 
-Two things the score deliberately avoids. It does not lean on the free-flow
-ratio, because that baseline grows with the crowd once the doors are the
-binding limit — a ratio-driven score rates 300 people safer than 120, and
-flatters venues whose theoretical best is slow because their doors are narrow.
-And exit balance is measured against each door's share of the total width, so a
-3 m door carrying three quarters of the crowd is correct rather than penalised.
+Two things the score deliberately avoids. It does not use the free-flow ratio
+at all: that baseline gets faster as a venue is improved, so the ratio gets
+worse, and it has been caught three times rating an improvement as a
+regression. It stays a reported metric and is not a penalty. And exit balance
+is measured against each door's share of the total width, then scaled by how
+hard the doors are working — a 3 m door carrying three quarters of the crowd is
+correct rather than penalised, and an uneven split across four generous gates
+costs almost nothing.
+
+They are real, recognisable venue types rather than abstract halls, because the
+problems worth finding — a ring you have to walk round, a vomitory, a fire exit
+behind a bar — only exist in buildings shaped like buildings.
 
 ### Heatmap
 

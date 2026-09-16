@@ -27,14 +27,22 @@ EXIT_WEIGHT = 25
 # venues of this size actually occupy.
 COMFORTABLE_SECONDS = 45
 ALARMING_SECONDS = 180
-ABSOLUTE_SHARE = 25
 
-# Efficiency, as a secondary term. Some overhead above free flow is
-# unavoidable — people start in different places and cannot all walk at once —
-# so 1.3x is treated as clean.
-CLEAN_RATIO = 1.3
-POOR_RATIO = 3.0
-EFFICIENCY_SHARE = 10
+# The free-flow ratio is deliberately not scored. It remains a useful
+# *metric* — it says how much of the clearing time was congestion rather than
+# walking — but as a penalty it rewards bad venues and punishes good ones,
+# because widening a door makes the baseline faster and the ratio worse.
+#
+# Three measured cases, all of them the same fault:
+#   · a crowd sweep where the score rose as people were added, because the
+#     baseline grows with the crowd once the doors bind (Day 12);
+#   · a comparison where doubling the exit width improved every other measure
+#     and the ratio got 33% worse (Day 16);
+#   · an arena that scored 88 with four gates and 99 with two of them bricked
+#     up, having taken six seconds longer to clear (Day 17).
+#
+# A measure that systematically penalises improvement does not belong in a
+# safety score, however informative it is elsewhere.
 
 # Congestion. Calibrated against measured runs on venues that fail in
 # different ways: a hall with generous exits sits near 0.13 crowded share, a
@@ -100,35 +108,29 @@ def _grade(total: int) -> str:
 
 
 def _time_penalty(time: dict) -> dict:
-    """Mostly how long it took, plus a smaller term for how wasteful that was.
+    """How long people were actually stuck inside.
 
-    Neither measure works alone, and they fail in opposite directions.
+    Absolute, not relative. See the note on the free-flow ratio above for why
+    the obvious second term is absent: it moves the wrong way whenever a venue
+    is improved.
 
-    The ratio grows a baseline of its own: once the doors are the binding
-    limit, free flow rises with the crowd, so adding people can *lower* the
-    ratio while the venue plainly gets worse. And it flatters bad venues —
-    somewhere with one narrow door has such a slow theoretical best that
-    matching it looks like efficiency.
-
-    Absolute time has neither problem, so it carries most of the weight. But it
-    cannot tell a venue that is slow because it is enormous from one that is
-    slow because it is badly laid out, which is what the ratio is for. Summing
-    them, weighted, rather than taking the worse of the two: a venue that
-    clears in a minute is not dangerous merely for being inefficient about it.
+    The cost of this is real and worth naming. Absolute time cannot tell a
+    venue that is slow because it is enormous from one that is slow because it
+    is badly laid out. What it can do is never call an improvement a
+    regression, and the congestion and exit components carry the layout
+    question.
     """
     seconds = time["clearing_seconds"]
     ratio = time["time_ratio"]
-
-    absolute = _ramp(seconds, COMFORTABLE_SECONDS, ALARMING_SECONDS, ABSOLUTE_SHARE)
-    efficiency = _ramp(ratio, CLEAN_RATIO, POOR_RATIO, EFFICIENCY_SHARE)
-    penalty = min(TIME_WEIGHT, absolute + efficiency)
+    penalty = _ramp(seconds, COMFORTABLE_SECONDS, ALARMING_SECONDS, TIME_WEIGHT)
 
     if penalty < 1:
-        detail = "Clears quickly and close to the theoretical best."
-    elif absolute >= efficiency:
-        detail = f"Takes {seconds:.0f} s to clear."
+        detail = f"Clears in {seconds:.0f} s." if seconds else "Cleared quickly."
     else:
-        detail = f"Takes {ratio}x longer than an unobstructed evacuation would."
+        detail = f"Takes {seconds:.0f} s to clear"
+        if ratio:
+            detail += f", {ratio}x what an unobstructed evacuation would need"
+        detail += "."
 
     return {
         "name": "Time",
@@ -181,9 +183,17 @@ def _exit_penalty(exits: dict, time: dict) -> dict:
 
     capacity = _ramp(time["door_floor_ticks"], COMFORTABLE_DOOR_TICKS,
                      ALARMING_DOOR_TICKS, capacity_share)
+
     # An imbalance of 0.5 means a door carried half the crowd more than its
     # width justifies — as lopsided as it gets in practice.
-    balance = _ramp(exits["imbalance"], 0.1, 0.5, balance_share)
+    #
+    # Scaled by how close the doors are to their limit, because an uneven split
+    # only costs anything when they matter. Unscaled, a venue with four gates
+    # used unevenly scored worse than the same venue with two of them bricked
+    # up, despite clearing six seconds faster: adding exits creates imbalance,
+    # and the penalty could not see that the imbalance was harmless.
+    pressure = min(1.0, (time["door_floor_ticks"] or 0) / COMFORTABLE_DOOR_TICKS)
+    balance = _ramp(exits["imbalance"], 0.1, 0.5, balance_share) * pressure
     penalty = capacity + balance
 
     worst = max(exits["doors"], key=lambda d: d["overload"], default=None)
