@@ -44,11 +44,27 @@ class SimulatePage {
     this.legend = root.querySelector('#legend');
     this.cellReadout = root.querySelector('#cell-readout');
     this.scorePanel = root.querySelector('#score');
+    this.vipRow = root.querySelector('#vip-row');
+    this.vipNote = root.querySelector('#vip-note');
+    this.modeSelect = root.querySelector('#mode');
+    this.capacityInput = root.querySelector('#cell-capacity');
+    this.capacityNote = root.querySelector('#capacity-note');
+
+    this.proposalDialog = root.querySelector('#proposal');
+    this.proposalBefore = new GridCanvas(root.querySelector('#proposal-before'));
+    this.proposalAfter = new GridCanvas(root.querySelector('#proposal-after'));
+    this.proposalChanges = root.querySelector('#proposal-changes');
+    this.proposalLede = root.querySelector('#proposal-lede');
+    this.proposalStatus = root.querySelector('#proposal-status');
+    this.proposalRun = root.querySelector('#proposal-run');
+    this.proposal = null;
+    this.proposalShown = false;
     this.findingsPanel = root.querySelector('#findings');
     this.advicePanel = root.querySelector('#advice');
     this.highlight = null;
 
     this.#bindControls();
+    this.#syncMode();
     window.addEventListener('resize', () => this.#refit());
     this.#refit();
     this.#setPlaybackEnabled(false);
@@ -59,9 +75,11 @@ class SimulatePage {
   #settings() {
     const value = (id) => this.root.querySelector(`#${id}`).value;
     return {
+      mode: value('mode'),
       num_agents: Number(value('num-agents')),
       speed: Number(value('speed')),
       cell_capacity: Number(value('cell-capacity')),
+      vip_count: Number(value('vip-count')),
       seed: Number(value('seed')),
       routing: value('routing'),
       reroute: this.root.querySelector('#reroute').checked,
@@ -109,12 +127,126 @@ class SimulatePage {
     this.#setStatus(this.#statusFor(summary));
     this.#drawFrame();
     this.player.play();
+    this.#offerProposal(result.id);
+  }
+
+  /* The proposal ---------------------------------------------------------- */
+
+  async #offerProposal(simulationId) {
+    this.proposal = null;
+    this.proposalShown = false;
+    if (!simulationId) return;
+
+    let proposal;
+    try {
+      proposal = await api.getProposal(simulationId);
+    } catch {
+      return;   // A missing proposal is not worth interrupting anybody over.
+    }
+    if (!proposal.available) return;
+
+    this.proposal = proposal;
+    this.#renderProposal(proposal);
+    // Prepared now, shown when the playback reaches the end. Interrupting a
+    // run that is still going is the wrong moment to ask somebody whether they
+    // want to try a different plan.
+    this.#maybeShowProposal();
+  }
+
+  #maybeShowProposal() {
+    if (!this.proposal || this.proposalShown) return;
+    if (!this.player || !this.player.atEnd) return;
+    this.proposalShown = true;
+    this.proposalDialog.showModal();
+    // Drawn only once the dialog is open. A closed <dialog> has no layout, so
+    // a canvas inside one measures zero by zero and renders nothing at all —
+    // which looked exactly like the proposal having no plan to show.
+    this.#drawProposalPlans(this.proposal);
+  }
+
+  #drawProposalPlans(proposal) {
+    const before = Grid.from(proposal.before);
+    const after = Grid.from(proposal.after);
+    const changed = new Set(
+      proposal.changed_cells.map(([x, y]) => y * proposal.after.width + x),
+    );
+
+    this.proposalBefore.fit(before);
+    this.proposalBefore.render(before, {});
+    this.proposalAfter.fit(after);
+    this.proposalAfter.render(after, { highlight: changed });
+  }
+
+  #renderProposal(proposal) {
+    const drawn = proposal.changes.filter((c) => c.drawn).length;
+    this.proposalLede.textContent = drawn === 1
+      ? 'One change from the advice below has been applied to the plan.'
+      : `${drawn} changes from the advice below have been applied to the plan.`;
+
+    this.proposalChanges.replaceChildren();
+    for (const change of proposal.changes) {
+      const item = document.createElement('div');
+      item.className = change.drawn ? 'proposal-change' : 'proposal-change is-note';
+      const title = document.createElement('strong');
+      title.textContent = change.drawn ? change.title : `Not drawn: ${change.title}`;
+      const detail = document.createElement('span');
+      detail.textContent = change.detail;
+      item.append(title, detail);
+      this.proposalChanges.append(item);
+    }
+
+    this.proposalStatus.textContent = '';
+    this.proposalRun.disabled = false;
+  }
+
+  /**
+   * Save the proposed plan as its own venue, run it with the same settings,
+   * and open the two side by side. Comparing them is the point: the estimate
+   * in the advice was derived from one run, and this replaces it with a
+   * second.
+   */
+  async #runProposal() {
+    const proposal = this.proposal;
+    if (!proposal) return;
+
+    this.proposalRun.disabled = true;
+    this.proposalStatus.textContent = 'Saving and running…';
+
+    try {
+      const venue = await api.createVenue({
+        name: proposal.suggested_name,
+        width: proposal.after.width,
+        height: proposal.after.height,
+        cells: proposal.after.cells,
+      });
+      const run = await api.runSimulation(venue.id, proposal.config);
+      await api.createComparison(proposal.simulation_id, run.id,
+                                 `${proposal.suggested_name} against the original`);
+      window.location.href =
+        `/compare?baseline=${proposal.simulation_id}&variant=${run.id}`;
+    } catch (error) {
+      this.proposalStatus.textContent = error.message;
+      this.proposalRun.disabled = false;
+    }
   }
 
   #renderScore(assessment, metrics) {
     this.scorePanel.replaceChildren();
+
+    // An arrival gets no grade. The thresholds were calibrated against
+    // evacuations, where the clock is a safety limit; four minutes to fill a
+    // venue is normal rather than dangerous. Saying so is better than printing
+    // a letter that would look authoritative and mean nothing.
     if (!assessment) {
-      this.scorePanel.hidden = true;
+      const note = document.createElement('p');
+      note.className = 'rail-note';
+      note.textContent = metrics && metrics.mode === 'arrival'
+        ? 'Arrivals are not graded: the safety score is calibrated against '
+          + 'evacuation times, where the clock is a safety limit. The '
+          + 'measurements and findings below still apply.'
+        : '';
+      this.scorePanel.append(note);
+      this.scorePanel.hidden = !note.textContent;
       return;
     }
 
@@ -161,8 +293,9 @@ class SimulatePage {
     if (metrics && metrics.time.binding_constraint) {
       const note = document.createElement('p');
       note.className = 'score-detail';
+      const doorWord = metrics.mode === 'arrival' ? 'entrance' : 'exit';
       note.textContent = metrics.time.binding_constraint === 'doors'
-        ? 'The doors are the limit here — a wider exit would help most.'
+        ? `The doors are the limit here — a wider ${doorWord} would help most.`
         : 'Walking distance is the limit here — wider doors would change little.';
       this.scorePanel.append(note);
     }
@@ -171,32 +304,52 @@ class SimulatePage {
   }
 
   #statusFor(summary) {
+    const arriving = summary.mode === 'arrival';
     if (summary.status === 'complete') {
-      return `Cleared in ${summary.clearing_seconds} s (${summary.clearing_ticks} ticks)`;
+      const verb = arriving ? 'Filled' : 'Cleared';
+      return `${verb} in ${summary.clearing_seconds} s (${summary.clearing_ticks} ticks)`;
     }
+    const outstanding = summary.agent_count - summary.evacuated;
     if (summary.status === 'timeout') {
-      return `Ran out of time with ${summary.agent_count - summary.evacuated} still inside`;
+      return arriving
+        ? `Ran out of time with ${outstanding} still to be seated`
+        : `Ran out of time with ${outstanding} still inside`;
     }
     return 'Nothing could move — the crowd is stuck';
   }
 
   #renderSummary(summary) {
-    // Clearing time is the headline; the ratio is what makes it mean anything.
-    // Twelve seconds is fine in a small room and alarming in a large one, and
-    // the ratio is what tells the two apart.
+    const arriving = summary.mode === 'arrival';
+
     const rows = [
-      ['Clearing time', summary.clearing_seconds ? `${summary.clearing_seconds} s` : '—'],
+      [arriving ? 'Time to fill' : 'Clearing time',
+       summary.clearing_seconds ? `${summary.clearing_seconds} s` : '—'],
       ['Against free flow', summary.time_ratio ? `${summary.time_ratio}×` : '—'],
-      ['Evacuated', `${summary.evacuated} of ${summary.agent_count}`],
+      [arriving ? 'In place' : 'Evacuated', `${summary.evacuated} of ${summary.agent_count}`],
     ];
     if (summary.stranded) rows.push(['Stranded', String(summary.stranded)]);
+    if (summary.stopped_short) {
+      rows.push(['Stopped in a gangway', String(summary.stopped_short)]);
+    }
+    if (summary.vip_count) {
+      rows.push(['VIPs', `${summary.vip_count} of ${summary.agent_count}`]);
+      rows.push(['All through by', summary.vip_cleared_seconds
+        ? `${summary.vip_cleared_seconds} s` : '—']);
+      for (const [id, count] of Object.entries(summary.checkpoint_usage)) {
+        if (!count) continue;
+        rows.push([`Checkpoint ${id} (${summary.checkpoint_widths[id]} m)`,
+                   `${count} people`]);
+      }
+    }
     if (summary.reroutes) rows.push(['Rerouted', String(summary.reroutes)]);
 
-    const usage = Object.entries(summary.exit_usage);
+    const usage = Object.entries(arriving ? summary.entrance_usage : summary.exit_usage);
+    const widths = arriving ? summary.entrance_widths : summary.exit_widths;
+    const word = arriving ? 'Entrance' : 'Exit';
     for (const [id, count] of usage) {
-      const width = summary.exit_widths[id];
+      const width = widths[id];
       const share = summary.evacuated ? Math.round((count / summary.evacuated) * 100) : 0;
-      rows.push([`Exit ${id} (${width} m)`, `${count} people, ${share}%`]);
+      rows.push([`${word} ${id} (${width} m)`, `${count} people, ${share}%`]);
     }
 
     this.summaryPanel.replaceChildren();
@@ -227,6 +380,8 @@ class SimulatePage {
     this.playButton.textContent = player.playing ? 'Pause' : 'Play';
     this.clock.textContent =
       `${player.seconds.toFixed(1)} s · ${player.remaining} inside`;
+
+    if (player.atEnd && !player.playing) this.#maybeShowProposal();
   }
 
   #setPlaybackEnabled(enabled) {
@@ -381,8 +536,20 @@ class SimulatePage {
       `${cell.x}, ${cell.y} · ${spec.format(value)} ${spec.unit}`;
   }
 
+  /* Nobody checks tickets on the way out, so the ticketed share is hidden
+     for an evacuation rather than left there doing nothing. */
+  #syncMode() {
+    const arriving = this.modeSelect.value === 'arrival';
+    this.vipRow.hidden = !arriving;
+    this.vipNote.hidden = !arriving;
+    this.capacityNote.hidden = !(arriving && Number(this.capacityInput.value) <= 2);
+  }
+
   #bindControls() {
     this.runButton.addEventListener('click', () => this.run());
+    this.modeSelect.addEventListener('change', () => this.#syncMode());
+    this.capacityInput.addEventListener('input', () => this.#syncMode());
+    this.proposalRun.addEventListener('click', () => this.#runProposal());
 
     this.heatSelect.addEventListener('change', () => {
       this.heatMode = this.heatSelect.value;

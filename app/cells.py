@@ -14,6 +14,7 @@ BARRIER = "2"
 ENTRANCE = "3"
 EXIT = "4"
 SPAWN = "5"
+CHECKPOINT = "6"
 
 CELL_NAMES = {
     FLOOR: "floor",
@@ -22,6 +23,7 @@ CELL_NAMES = {
     ENTRANCE: "entrance",
     EXIT: "exit",
     SPAWN: "spawn",
+    CHECKPOINT: "checkpoint",
 }
 
 VALID_CODES = frozenset(CELL_NAMES)
@@ -29,10 +31,10 @@ VALID_CODES = frozenset(CELL_NAMES)
 # Cells an agent may stand on. Walls and barriers are solid; barriers exist as a
 # separate code so the editor can distinguish structure from furniture, and so
 # recommendations can suggest moving a barrier but never a wall.
-WALKABLE = frozenset({FLOOR, ENTRANCE, EXIT, SPAWN})
+WALKABLE = frozenset({FLOOR, ENTRANCE, EXIT, SPAWN, CHECKPOINT})
 
 # Rendering order for the editor legend, coarse structure first.
-PALETTE_ORDER = (FLOOR, WALL, BARRIER, SPAWN, EXIT, ENTRANCE)
+PALETTE_ORDER = (FLOOR, WALL, BARRIER, SPAWN, EXIT, ENTRANCE, CHECKPOINT)
 
 
 def invalid_codes(cells: str) -> set[str]:

@@ -12,7 +12,7 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent.parent / "app" / "seed" / "venues"
 
-WALL, FLOOR, BARRIER, ENTRANCE, EXIT, SPAWN = "#", ".", "B", "N", "E", "S"
+WALL, FLOOR, BARRIER, ENTRANCE, EXIT, SPAWN, CHECKPOINT = "#", ".", "B", "N", "E", "S", "C"
 
 
 class Plan:
@@ -51,10 +51,29 @@ def arena():
     p.rect(15, 19, 16, 19, EXIT)
     p.rect(0, 8, 0, 10, EXIT)
     p.rect(31, 8, 31, 10, EXIT)
+
+    # Turnstile banks at two corners. Ways in, not ways out: a turnstile does
+    # not work in reverse, which is exactly the distinction an entrance models.
+    p.rect(3, 0, 5, 0, ENTRANCE)
+    p.rect(26, 19, 28, 19, ENTRANCE)
+
+    # A VIP box in the bottom-left concourse corner, walled off and reached
+    # only through a two-cell checkpoint. The restricted area falls out of the
+    # geometry: there is no way in that does not pass the security line.
+    p.rect(1, 15, 6, 15, WALL)
+    p.rect(1, 16, 1, 18, WALL)
+    p.rect(6, 16, 6, 18, WALL)
+    p.rect(2, 16, 5, 18, SPAWN)
+    p.rect(3, 15, 4, 15, CHECKPOINT)
     return "arena", "Arena", p, [
-        "Four stands around a court, with a gate on each side. The court is",
-        "solid, so the concourse is a ring and the crowd has to travel round",
-        "it rather than across it.",
+        "Four stands around a court, with a gate on each side and turnstile",
+        "banks at two corners. The court is solid, so the concourse is a ring",
+        "and the crowd has to travel round it rather than across it.",
+        "",
+        "Worth running both ways: the turnstiles are the limit coming in, and",
+        "they are not exits, so they count for nothing going out. The bag",
+        "boxes in two corners are reached only through a checkpoint, so they",
+        "are where the VIPs go.",
     ]
 
 
@@ -96,10 +115,15 @@ def theatre():
     p.rect(18, 19, 19, 19, EXIT)
     p.rect(0, 6, 0, 6, EXIT)
     p.rect(29, 6, 29, 6, EXIT)
+    # The foyer doors, at the back. An audience arrives through these and
+    # leaves through everything.
+    p.rect(4, 19, 5, 19, ENTRANCE)
+    p.rect(24, 19, 25, 19, ENTRANCE)
     return "theatre", "Theatre", p, [
         "A stage, an orchestra block and a balcony, with aisles between them.",
         "The stage is solid, so the whole audience leaves by the back and the",
-        "side doors.",
+        "side doors. It arrives through the two foyer doors, which is a much",
+        "narrower way in than the way out — run it both ways and compare.",
     ]
 
 

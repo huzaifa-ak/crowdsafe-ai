@@ -6,7 +6,10 @@ Editor, simulate, results and compare pages are added on their scheduled days.
 from flask import Blueprint, abort, render_template
 
 from .cells import CELL_NAMES, PALETTE_ORDER
+from .config import Config
 from .db import repository
+from .engine.grid import Grid
+from .engine.layout import inspect
 
 bp = Blueprint("pages", __name__)
 
@@ -21,7 +24,26 @@ def _palette():
 
 @bp.get("/")
 def dashboard():
-    return render_template("dashboard.html", venues=repository.list_venues())
+    """The venue list, with enough about each plan to tell them apart.
+
+    Counting the cells here rather than in the browser keeps the page a plain
+    server-rendered table: the list is the one screen that should be readable
+    before any JavaScript runs.
+    """
+    venues = []
+    for summary in repository.list_venues():
+        full = repository.get_venue(summary["id"])
+        grid = Grid.from_venue(full)
+        venues.append({
+            **summary,
+            "exits": len(grid.exits),
+            "exit_width": grid.total_exit_width,
+            "entrance_width": grid.total_entrance_width,
+            "checkpoints": len(grid.checkpoints),
+            "capacity": len(grid.spawn_cells) * Config.CELL_CAPACITY,
+            "usable": inspect(grid)["ok"],
+        })
+    return render_template("dashboard.html", venues=venues)
 
 
 @bp.get("/editor")

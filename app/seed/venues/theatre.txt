@@ -1,7 +1,8 @@
 # Theatre
 # A stage, an orchestra block and a balcony, with aisles between them.
 # The stage is solid, so the whole audience leaves by the back and the
-# side doors.
+# side doors. It arrives through the two foyer doors, which is a much
+# narrower way in than the way out — run it both ways and compare.
 ##############################
 #.......BBBBBBBBBBBBBB.......#
 #.......BBBBBBBBBBBBBB.......#
@@ -21,4 +22,4 @@ E..SSSSSSS.SSSSSSSS.SSSSSSS..E
 #............................#
 #............................#
 #............................#
-##########EE######EE##########
+####NN####EE######EE####NN####

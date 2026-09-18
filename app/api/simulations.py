@@ -17,8 +17,10 @@ from ..config import Config
 from ..db import repository
 from ..engine.grid import Grid
 from ..engine.layout import inspect
+from ..engine.pathfinding import distance_field
 from ..analysis import metrics as metrics_module
 from ..analysis.bottlenecks import detect as detect_bottlenecks
+from ..analysis.improve import improve
 from ..analysis.recommendations import recommend
 from ..analysis.score import score as score_run
 from ..engine.simulation import SimulationConfig, simulate
@@ -47,10 +49,10 @@ def _summarise(result, grid: Grid, report: dict, settings: dict) -> dict:
     # slower one is the floor. Walking distance alone would punish any venue
     # with a narrow door regardless of how good its layout is
     # (docs/decisions.md, correction 1).
+    arriving = settings["mode"] == "arrival"
+    total_width = grid.total_entrance_width if arriving else grid.total_exit_width
     walk_ticks = (report["longest_walk"] or 0) / settings["speed"]
-    throughput_ticks = (
-        result.agent_count / grid.total_exit_width if grid.total_exit_width else None
-    )
+    throughput_ticks = result.agent_count / total_width if total_width else None
     free_flow = max(walk_ticks, throughput_ticks) if throughput_ticks else None
 
     return {
@@ -61,12 +63,25 @@ def _summarise(result, grid: Grid, report: dict, settings: dict) -> dict:
         "stranded": result.stranded,
         "clearing_ticks": clearing,
         "clearing_seconds": round(clearing * Config.SECONDS_PER_TICK, 1) if clearing else None,
+        "mode": settings["mode"],
         "exit_usage": {str(k): v for k, v in result.exit_usage.items()},
+        "entrance_usage": {str(k): v for k, v in result.entrance_usage.items()},
+        "checkpoint_usage": {str(k): v for k, v in result.checkpoint_usage.items()},
+        "checkpoint_widths": {str(s_.id): s_.width for s_ in grid.checkpoints},
+        "vip_count": result.vip_count,
+        "vip_places": len(grid.restricted_spawn_cells) * settings["cell_capacity"],
+        "general_places": len(grid.general_spawn_cells) * settings["cell_capacity"],
+        "vip_cleared_seconds": (
+            round(result.vip_clearing_ticks * Config.SECONDS_PER_TICK, 1)
+            if result.vip_clearing_ticks else None
+        ),
+        "stopped_short": result.stopped_short,
         # How much rerouting the run needed, and how many searches that cost.
         # A large gap between them means the route cache is doing its job.
         "reroutes": result.reroutes,
         "searches": result.searches,
         "exit_widths": {str(e.id): e.width for e in grid.exits},
+        "entrance_widths": {str(e.id): e.width for e in grid.entrances},
         "free_flow_ticks": round(free_flow, 1) if free_flow else None,
         "time_ratio": round(clearing / free_flow, 2) if clearing and free_flow else None,
     }
@@ -90,10 +105,81 @@ def run_simulation():
     settings = validate_simulation_config(body.get("config"))
     grid = Grid.from_venue(venue)
 
-    # Refuse layouts that cannot be evacuated, rather than running for 600 ticks
-    # to produce a result whose only content is "nothing happened".
+    # Refuse layouts that cannot be run, rather than spending 600 ticks to
+    # produce a result whose only content is "nothing happened".
     report = inspect(grid)
-    if not report["ok"]:
+    arriving = settings["mode"] == "arrival"
+
+    # Nobody checks tickets on the way out, so the split is meaningless for an
+    # evacuation. Ignored rather than refused: the setting belongs to the
+    # venue, and switching mode to compare should not need it cleared first.
+    if not arriving:
+        settings["vip_count"] = 0
+
+    if arriving:
+        vips = settings["vip_count"]
+        vip_capacity = len(grid.restricted_spawn_cells) * settings["cell_capacity"]
+        general_capacity = len(grid.general_spawn_cells) * settings["cell_capacity"]
+
+        if vips and not grid.checkpoints:
+            raise ValidationError(
+                "This venue has no checkpoints.",
+                [{"field": "vip_count",
+                  "message": "A VIP area is the part of the plan you can only "
+                             "reach through a checkpoint, and there are none "
+                             "here. Paint a checkpoint across the way into the "
+                             "area you want restricted."}],
+            )
+        if vips and not grid.restricted_spawn_cells:
+            raise ValidationError(
+                "This venue has no VIP area.",
+                [{"field": "vip_count",
+                  "message": "There are checkpoints, but every part of the floor "
+                             "can still be reached without passing one, so there "
+                             "is nowhere only VIPs can go."}],
+            )
+        if vips > vip_capacity:
+            raise ValidationError(
+                "That many VIPs will not fit.",
+                [{"field": "vip_count",
+                  "message": f"The VIP area holds {vip_capacity} people at "
+                             f"{settings['cell_capacity']} per m²."}],
+            )
+        if settings["num_agents"] - vips > general_capacity:
+            raise ValidationError(
+                "That many people will not fit in the general area.",
+                [{"field": "num_agents",
+                  "message": f"It holds {general_capacity} at "
+                             f"{settings['cell_capacity']} per m², and "
+                             f"{settings['num_agents'] - vips} are not VIPs."}],
+            )
+        if not grid.entrances:
+            raise ValidationError(
+                "This venue cannot be filled yet.",
+                [{"field": "venue",
+                  "message": "There are no entrances, so nobody can get in. "
+                             "Paint some entrance cells and try again."}],
+            )
+        if not grid.spawn_cells:
+            raise ValidationError(
+                "This venue cannot be filled yet.",
+                [{"field": "venue",
+                  "message": "There is no spawn area, so there is nowhere for "
+                             "people to go."}],
+            )
+        # Reachability is measured from the entrances for an arrival, so the
+        # walking floor is the longest walk *in* rather than out.
+        reach = distance_field(grid, grid.entrance_cells)
+        walks = [reach[cell] for cell in grid.spawn_cells if cell in reach]
+        if not walks:
+            raise ValidationError(
+                "This venue cannot be filled yet.",
+                [{"field": "venue",
+                  "message": "No part of the spawn area can be reached from an "
+                             "entrance."}],
+            )
+        report = {**report, "longest_walk": max(walks)}
+    elif not report["ok"]:
         raise ValidationError(
             "This venue cannot be simulated yet.",
             [{"field": "venue", "message": p["message"]} for p in report["problems"]],
@@ -117,11 +203,18 @@ def run_simulation():
     summary["trace"] = trace_store.summarise(result.trace, blob)
 
     measured = metrics_module.compute(grid, result, settings, report["longest_walk"])
-    findings = detect_bottlenecks(grid, result.density)
+    findings = detect_bottlenecks(grid, result.density, mode=settings["mode"])
     advice = recommend(grid, measured, findings, settings)
-    assessment = score_run(measured)
-    summary["score"] = assessment["score"]
-    summary["grade"] = assessment["grade"]
+
+    # No grade for an arrival. The score's thresholds were calibrated against
+    # evacuations, where the clock is a safety limit; a venue taking four
+    # minutes to fill is normal rather than dangerous. Grading one against the
+    # other's scale would produce a number that looks authoritative and means
+    # nothing. The measurements and the findings still stand on their own.
+    assessment = None if settings["mode"] == "arrival" else score_run(measured)
+    if assessment:
+        summary["score"] = assessment["score"]
+        summary["grade"] = assessment["grade"]
 
     simulation_id = repository.create_simulation(
         venue_id=venue["id"],
@@ -191,6 +284,44 @@ def get_simulation(simulation_id: int):
         with_trace=request.args.get("trace", "1") != "0",
         with_density=request.args.get("density", "1") != "0",
     ))
+
+
+@bp.get("/<int:simulation_id>/proposal")
+def get_proposal(simulation_id: int):
+    """The venue with this run's buildable advice applied.
+
+    Kept out of the run's own response because it is only wanted once somebody
+    asks, and it costs a second layout inspection to produce.
+    """
+    run = load_run(simulation_id, with_trace=False, with_density=False)
+    snapshot = run["venue_snapshot"]
+    grid = Grid(snapshot["width"], snapshot["height"], snapshot["cells"])
+
+    proposal = improve(grid, run.get("recommendations") or [])
+    if proposal is None:
+        return jsonify({
+            "available": False,
+            "reason": "Nothing in this run's advice is a change to the plan.",
+        })
+
+    venue = repository.get_venue(run["venue_id"]) if run.get("venue_id") else None
+    base_name = venue["name"] if venue else "Venue"
+
+    return jsonify({
+        "available": True,
+        "simulation_id": simulation_id,
+        "venue_id": run.get("venue_id"),
+        "suggested_name": f"{base_name} suggested",
+        "config": run["config"],
+        "before": snapshot,
+        "after": {
+            "width": proposal["width"],
+            "height": proposal["height"],
+            "cells": proposal["cells"],
+        },
+        "changed_cells": proposal["changed_cells"],
+        "changes": proposal["changes"],
+    })
 
 
 @bp.get("")

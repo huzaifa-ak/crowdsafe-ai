@@ -138,6 +138,8 @@ def validate_simulation_config(payload) -> dict:
             payload, "max_ticks", 1, config["MAX_TICKS"], config["MAX_TICKS"], problems),
         "seed": _validate_number(
             payload, "seed", 0, 2**31 - 1, config["DEFAULT_SEED"], problems),
+        "vip_count": _validate_number(
+            payload, "vip_count", 0, config["MAX_AGENTS"], 0, problems),
     }
 
     for flag, default in (("entrances_are_exits", False), ("reroute", True)):
@@ -146,6 +148,12 @@ def validate_simulation_config(payload) -> dict:
             problems.append(_problem(flag, f"{flag} must be true or false"))
         else:
             cleaned[flag] = value
+
+    mode = payload.get("mode", "evacuation")
+    if mode not in ("evacuation", "arrival"):
+        problems.append(_problem("mode", "mode must be 'evacuation' or 'arrival'"))
+    else:
+        cleaned["mode"] = mode
 
     routing = payload.get("routing", "nearest")
     if routing not in ("nearest", "balanced"):

@@ -15,6 +15,7 @@ export const CELL = {
   ENTRANCE: '3',
   EXIT: '4',
   SPAWN: '5',
+  CHECKPOINT: '6',
 };
 
 export const CELL_NAMES = {
@@ -24,6 +25,7 @@ export const CELL_NAMES = {
   [CELL.ENTRANCE]: 'Entrance',
   [CELL.EXIT]: 'Exit',
   [CELL.SPAWN]: 'Spawn',
+  [CELL.CHECKPOINT]: 'Checkpoint',
 };
 
 export const CELL_COLORS = {
@@ -33,6 +35,10 @@ export const CELL_COLORS = {
   [CELL.ENTRANCE]: '#6d4bb0',
   [CELL.EXIT]: '#007a45',
   [CELL.SPAWN]: '#5b6ee1',
+  // Teal: cool, so it never competes with the density heatmap, and far
+  // enough from both the exit green and the entrance violet to be told apart
+  // at a glance.
+  [CELL.CHECKPOINT]: '#0e7c86',
 };
 
 export class Grid {

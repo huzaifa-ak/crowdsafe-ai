@@ -147,11 +147,57 @@ h1 {
 .venue-table td {
   padding: calc(var(--step) * 1.5) calc(var(--step) * 1.5) calc(var(--step) * 1.5) 0;
   border-bottom: 1px solid var(--rule-faint);
-  vertical-align: baseline;
+  vertical-align: middle;
 }
 
+.venue-table tbody tr:hover { background: var(--panel); }
+.venue-table tbody tr:hover .row-actions { opacity: 1; }
+
 .venue-name { font-weight: 500; }
-.row-actions { text-align: right; }
+.muted { color: var(--ink-soft); font-weight: 400; }
+
+/* Actions stay visible but recede until the row is under the cursor, so a
+   list of ten venues reads as a list rather than as thirty buttons. */
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--step);
+  opacity: 0.55;
+  transition: opacity 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-actions { transition: none; }
+}
+
+.row-actions:focus-within { opacity: 1; }
+
+.action-small {
+  padding: calc(var(--step) * 0.4) calc(var(--step) * 1.1);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.action-danger { color: var(--alert); border-color: var(--rule); }
+.action-danger:hover { border-color: var(--alert); background: #fdf0ef; }
+.action-danger:disabled { opacity: 0.5; cursor: default; }
+
+/* A small label for something true about a venue rather than something to do
+   with it. */
+.tag {
+  display: inline-block;
+  margin-left: calc(var(--step) * 0.75);
+  padding: 1px calc(var(--step) * 0.75);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.tag-warn { border-color: var(--alert); color: var(--alert); }
 
 /* Empty state: a sheet of 1 m grid paper -------------------------------- */
 
@@ -211,6 +257,7 @@ h1 {
   --cell-entrance: #6d4bb0;
   --cell-exit:     #007a45;
   --cell-spawn:    #5b6ee1;
+  --cell-checkpoint: #0e7c86;
 }
 
 .editor-shell {
@@ -290,6 +337,7 @@ h1 {
 .swatch-chip[data-swatch="3"] { background: var(--cell-entrance); }
 .swatch-chip[data-swatch="4"] { background: var(--cell-exit); }
 .swatch-chip[data-swatch="5"] { background: var(--cell-spawn); }
+.swatch-chip[data-swatch="6"] { background: var(--cell-checkpoint); }
 
 .swatch-count { color: var(--ink-soft); font-size: 0.8rem; }
 
@@ -683,3 +731,101 @@ h1 {
 @media (max-width: 720px) {
   .compare-plans { grid-template-columns: 1fr; }
 }
+
+
+/* Proposal dialog --------------------------------------------------------- */
+
+#proposal {
+  width: min(760px, 92vw);
+  padding: calc(var(--step) * 3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+#proposal::backdrop { background: rgba(20, 32, 43, 0.45); }
+
+#proposal h2 { margin: 0 0 var(--step); font-size: 1.15rem; font-weight: 600; }
+
+.proposal-close { float: right; margin-left: var(--step); }
+.proposal-close .action { cursor: pointer; }
+
+.proposal-lede {
+  margin: 0 0 calc(var(--step) * 2);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Two plans side by side, kept deliberately small: the dialog is for seeing
+   what changed, not for studying the venue. The editor is for that. */
+.proposal-plans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--step) * 2);
+}
+
+.proposal-plans figure { margin: 0; }
+
+.proposal-plans canvas {
+  display: block;
+  width: 100%;
+  height: 180px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--sheet);
+}
+
+.proposal-plans figcaption {
+  padding-top: calc(var(--step) * 0.75);
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .proposal-plans { grid-template-columns: 1fr; }
+}
+
+.proposal-changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--step);
+  margin: calc(var(--step) * 2) 0;
+}
+
+.proposal-change {
+  padding: var(--step) calc(var(--step) * 1.5);
+  border-left: 3px solid var(--exit);
+  background: var(--sheet);
+  border-radius: var(--radius);
+}
+
+.proposal-change.is-note { border-left-color: var(--ink-soft); }
+
+.proposal-change strong { display: block; font-size: 0.85rem; font-weight: 600; }
+.proposal-change span { color: var(--ink-soft); font-size: 0.78rem; line-height: 1.45; }
+
+.proposal-actions {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--step) * 2);
+}
+
+.proposal-actions .action { cursor: pointer; }
+
+/* A button that reads as a link, for a destructive action that should not look
+   like a call to action. */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--alert);
+  font: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-button:disabled { color: var(--ink-soft); cursor: default; }

@@ -75,6 +75,8 @@ export const api = {
   listSimulations: (venueId) =>
     request('GET', venueId ? `/api/simulations?venue_id=${venueId}` : '/api/simulations'),
 
+  getProposal: (simulationId) => request('GET', `/api/simulations/${simulationId}/proposal`),
+
   createComparison: (baselineId, variantId, name) =>
     request('POST', '/api/comparisons', {
       baseline_simulation_id: baselineId,

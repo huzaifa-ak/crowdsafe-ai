@@ -4,7 +4,7 @@
 readable — layouts are drawn, not hand-encoded:
 
     ##########
-    #S.....#E#     # wall   . floor   S spawn   E exit   B barrier   N entrance
+    #S.....#E#   # wall  . floor  S spawn  E exit  B barrier  N entrance  C checkpoint
     #S.....#.#
     ##########
 """
@@ -14,7 +14,7 @@ import pytest
 from app import create_app
 from app.config import TestConfig
 
-CHAR_TO_CODE = {".": 0, "#": 1, "B": 2, "N": 3, "E": 4, "S": 5}
+CHAR_TO_CODE = {".": 0, "#": 1, "B": 2, "N": 3, "E": 4, "S": 5, "C": 6}
 
 
 @pytest.fixture

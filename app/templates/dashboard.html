@@ -2,7 +2,7 @@
 
 {% block nav %}
   <a class="action" href="{{ url_for('pages.compare') }}">Compare runs</a>
-  <a class="action" href="{{ url_for('pages.new_editor') }}">New venue</a>
+  <a class="action action-primary" href="{{ url_for('pages.new_editor') }}">New venue</a>
 {% endblock %}
 
 {% block content %}
@@ -13,24 +13,47 @@
   </p>
 
   {% if venues %}
-    <table class="venue-table">
+    <table class="venue-table" id="venues">
       <thead>
         <tr>
           <th scope="col">Name</th>
           <th scope="col" class="numeric">Size</th>
-          <th scope="col">Last edited</th>
+          <th scope="col" class="numeric">Holds</th>
+          <th scope="col">Ways out</th>
+          <th scope="col">Edited</th>
           <th scope="col"><span class="visually-hidden">Actions</span></th>
         </tr>
       </thead>
       <tbody>
         {% for venue in venues %}
           <tr>
-            <td class="venue-name">{{ venue.name }}</td>
+            <td class="venue-name">
+              {{ venue.name }}
+              {% if not venue.usable %}
+                <span class="tag tag-warn" title="No exits, or part of the floor cannot reach one">needs an exit</span>
+              {% endif %}
+              {% if venue.checkpoints %}
+                <span class="tag">VIP area</span>
+              {% endif %}
+            </td>
             <td class="numeric">{{ venue.width }} × {{ venue.height }} m</td>
-            <td>{{ venue.updated_at }}</td>
+            <td class="numeric">{{ venue.capacity }}</td>
+            <td class="numeric">
+              {% if venue.exits %}
+                {{ venue.exit_width }} m
+                <span class="muted">across {{ venue.exits }}</span>
+              {% else %}
+                <span class="muted">none</span>
+              {% endif %}
+            </td>
+            <td class="muted">{{ venue.updated_at[:10] }}</td>
             <td class="row-actions">
-              <a href="{{ url_for('pages.simulate_venue', venue_id=venue.id) }}">Run</a>
-              <a href="{{ url_for('pages.edit_venue', venue_id=venue.id) }}">Edit</a>
+              <a class="action action-small action-primary"
+                 href="{{ url_for('pages.simulate_venue', venue_id=venue.id) }}">Run</a>
+              <a class="action action-small"
+                 href="{{ url_for('pages.edit_venue', venue_id=venue.id) }}">Edit</a>
+              <button type="button" class="action action-small action-danger"
+                      data-delete="{{ venue.id }}" data-name="{{ venue.name }}">Delete</button>
             </td>
           </tr>
         {% endfor %}
@@ -48,4 +71,8 @@
       </div>
     </div>
   {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

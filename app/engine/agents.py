@@ -29,10 +29,30 @@ class Agent:
 
     tick_exited: int | None = None
 
+    # Arrival runs only. An agent starts outside the building, queues at an
+    # entrance, walks to the place it is heading for, and stops there. It stays
+    # in the room afterwards, which is the whole difference from an evacuation:
+    # people accumulate rather than drain.
+    target: Point | None = None
+    waiting: bool = False
+    seated: bool = False
+    tick_arrived: int | None = None
+
+    # Ticketing. A VIP has to be processed at a checkpoint before going to
+    # their place, so their journey has two legs rather than one; `cleared`
+    # says which leg they are on.
+    is_vip: bool = False
+    cleared: bool = True
+    tick_cleared: int | None = None
+
     # Consecutive ticks this agent wanted to move and could not. Drives
     # rerouting: someone standing still behind a jam is the signal that the
     # route they were given is no longer the best one available.
     blocked_ticks: int = 0
+    # Never reset, unlike blocked_ticks, which rerouting clears. Without a
+    # counter that survives a reroute, an agent that reroutes uselessly every
+    # twenty ticks looks like it is making progress forever.
+    total_blocked: int = 0
     last_reroute_tick: int = -10_000
 
     @property
@@ -44,9 +64,19 @@ class Agent:
         return self.tick_exited is not None
 
     @property
+    def is_inside(self) -> bool:
+        """Standing somewhere in the venue, whether or not still moving."""
+        return not self.waiting and not self.has_left
+
+    @property
     def is_stranded(self) -> bool:
-        """No route out. Counted separately from people who simply ran out of time."""
-        return not self.path and not self.has_left
+        """No route to where they are going. Counted separately from people who
+        simply ran out of time.
+
+        Someone still queueing outside has no path yet and is not stranded —
+        they have not been let in.
+        """
+        return not self.waiting and not self.path and not self.has_left
 
     def next_cell(self) -> Point | None:
         if self.path_index + 1 >= len(self.path):
@@ -192,3 +222,59 @@ class RoutePlanner:
             if len(self._cache) > 4000:
                 self._cache = {k: v for k, v in self._cache.items() if k[2] == epoch}
         return self._cache[key]
+
+
+def places_in(cells: list[Point], count: int, cell_capacity: int,
+              rng: random.Random, what: str) -> list[Point]:
+    """Pick `count` places from `cells`, at most `cell_capacity` in each."""
+    slots = [cell for cell in cells for _ in range(cell_capacity)]
+    if count > len(slots):
+        raise ValueError(
+            f"{count} people will not fit in the {what}: {len(cells)} cells "
+            f"hold at most {len(slots)} at capacity {cell_capacity}"
+        )
+    rng.shuffle(slots)
+    chosen = slots[:count]
+    chosen.sort(key=lambda cell: (cell[1], cell[0]))
+    return chosen
+
+
+def arrival_targets(grid: Grid, count: int, cell_capacity: int,
+                    rng: random.Random) -> list[Point]:
+    """Where each arriving person is heading.
+
+    Built the same way `spawn_agents` places a crowd, because it describes the
+    same end state: the room once everyone is in it. Doing it that way means an
+    arrival run and an evacuation run of the same venue and seed finish and
+    start in the same configuration, so the two can be read as one sequence.
+    """
+    slots = [cell for cell in grid.spawn_cells for _ in range(cell_capacity)]
+    if count > len(slots):
+        raise ValueError(
+            f"{count} people will not fit: {len(grid.spawn_cells)} spawn cells "
+            f"hold at most {len(slots)} at capacity {cell_capacity}"
+        )
+    rng.shuffle(slots)
+    chosen = slots[:count]
+    chosen.sort(key=lambda cell: (cell[1], cell[0]))
+    return chosen
+
+
+def assign_entrances(grid: Grid, agents: list[Agent],
+                     fields: dict[int, dict[Point, int]]) -> None:
+    """Send each person to the entrance nearest the place they are heading for.
+
+    Which models a ticketed venue, where people are directed to the door
+    closest to their block. It is also the assumption that makes an entrance
+    imbalance meaningful: if the doors are still uneven under it, the building
+    is at fault rather than the crowd.
+    """
+    for agent in agents:
+        best_id, best = None, None
+        for entrance_id, field_ in fields.items():
+            distance = field_.get(agent.target)
+            if distance is None:
+                continue
+            if best is None or distance < best:
+                best_id, best = entrance_id, distance
+        agent.exit_id = best_id

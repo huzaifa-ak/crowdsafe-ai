@@ -23,6 +23,22 @@
     </section>
 
     <section class="rail-group">
+      <h2 class="rail-heading">What to simulate</h2>
+      <div class="size-row">
+        <label for="mode">Run</label>
+        <select id="mode">
+          <option value="evacuation">Everyone leaving</option>
+          <option value="arrival">Everyone arriving</option>
+        </select>
+      </div>
+      <p class="rail-note">
+        Leaving empties a full venue through its exits. Arriving fills an empty
+        one through its entrances, with people walking to a place and staying
+        there.
+      </p>
+    </section>
+
+    <section class="rail-group">
       <h2 class="rail-heading">Crowd</h2>
       <div class="size-row">
         <label for="num-agents">People</label>
@@ -36,6 +52,25 @@
         <label for="cell-capacity">Per m²</label>
         <input type="number" id="cell-capacity" class="numeric" min="1" max="5" value="3">
       </div>
+      <p class="rail-note" id="capacity-note" hidden>
+        At one or two people per m² there is very little room to pass in a
+        seating area, so an arrival can jam before everyone is in. That is a
+        real effect rather than a glitch, and the run says so when it happens.
+      </p>
+      <div class="size-row" id="vip-row">
+        <label for="vip-count">VIPs</label>
+        <input type="number" id="vip-count" class="numeric" min="0" max="300" value="0">
+      </div>
+      <p class="rail-note" id="vip-note">
+        How many of them are VIPs, counted out of the total above. VIPs have
+        places in the restricted area and reach it through a checkpoint, one
+        person per lane cell per tick. Everybody else stays in the general
+        area and never enters the lane.
+        <br><br>
+        The restricted area is whatever part of the plan can only be reached by
+        passing a checkpoint, so painting a checkpoint across the way in is all
+        it takes to create one.
+      </p>
     </section>
 
     <section class="rail-group">
@@ -102,6 +137,33 @@
       <dl class="summary" id="summary" hidden></dl>
     </section>
   </aside>
+
+  <dialog id="proposal">
+    <form method="dialog" class="proposal-close">
+      <button class="action" value="cancel" aria-label="Close">Close</button>
+    </form>
+    <h2 id="proposal-title">A version with the advice applied</h2>
+    <p class="proposal-lede" id="proposal-lede"></p>
+
+    <div class="proposal-plans">
+      <figure>
+        <canvas id="proposal-before"></canvas>
+        <figcaption>As drawn</figcaption>
+      </figure>
+      <figure>
+        <canvas id="proposal-after"></canvas>
+        <figcaption>Suggested &middot; changes outlined</figcaption>
+      </figure>
+    </div>
+
+    <div class="proposal-changes" id="proposal-changes"></div>
+    <div class="proposal-actions">
+      <button type="button" class="action action-primary" id="proposal-run">
+        Save and run this version
+      </button>
+      <span class="rail-note" id="proposal-status"></span>
+    </div>
+  </dialog>
 
   <div class="canvas-surface">
     <canvas id="grid-canvas"></canvas>

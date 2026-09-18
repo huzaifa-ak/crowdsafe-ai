@@ -61,7 +61,8 @@ work does not survive a redeploy.
 
 ## Status
 
-Four-week build, one developer. Day 17 of 20 complete. Deployed at
+Four-week build, one developer. Day 17 complete, plus arrival flow (17.1),
+checkpoints and the VIP area (17.2), and proposed plans (17.3). Deployed at
 https://crowdsafe-ai.onrender.com.
 
 A venue can be drawn, named, saved, reopened and edited again. Behind that:
@@ -124,6 +125,65 @@ The trace arrives with the response, so scrubbing is entirely local and never
 waits on the network. Space plays and pauses, the arrow keys step a tick at a
 time (hold shift for ten), and the rate button cycles 1× to 8× real time.
 
+### Arrival
+
+A run is either an **evacuation** — a full venue emptying through its exits —
+or an **arrival**: an empty one filling through its entrances, with people
+queueing outside, walking to a place, and staying there. Pick which on the
+simulate page.
+
+The mechanics are shared, so capacity, slowdown and rerouting behave
+identically. Three things differ, and they are the whole feature:
+
+- People start outside and are admitted one per entrance cell per tick, the
+  same flow cap that makes exits bottleneck.
+- Each is allocated a place before the run, exactly as an evacuation places its
+  crowd, so an arrival of one venue and seed finishes in the state the
+  evacuation of it starts in.
+- They stay. The floor gets progressively fuller, so later arrivals pick their
+  way past people already in place — which is why an arrival can jam where an
+  evacuation of the same venue does not.
+
+Queue order is farthest place first, which is why ushers and row numbers work
+that way: nobody has to walk past somebody already seated. When that is not
+enough, people take a different place, and failing that stop where they are.
+That last case is counted as `stopped_short` and reported, because a gangway
+with people standing in it is a finding rather than a rounding error.
+
+**Arrivals are not graded.** The safety score's thresholds were calibrated
+against evacuations, where the clock is a safety limit; four minutes to fill a
+venue is normal rather than dangerous. The measurements, findings and
+recommendations all still apply — only the A–F letter is withheld, because
+grading one against the other's scale would produce a number that looks
+authoritative and means nothing.
+
+### Checkpoints and the VIP area
+
+A seventh cell type, painted in teal. A run of adjacent checkpoint cells is one
+station and, like a doorway, passes one person per cell per tick.
+
+What makes it more than a slow doorway is what sits behind it. **Any part of
+the floor that can only be reached by passing a checkpoint is a restricted
+area**, worked out from the plan rather than painted separately: a restricted
+area *is* the part of the building behind the security line, and marking it
+twice would only be a way for the two to disagree. Paint a checkpoint across
+the way into a walled-off block and you have made a VIP box.
+
+On an arrival, set **VIPs** on the simulate page: how many of the crowd, out of
+the total, have places in that area. They reach it through the checkpoint;
+everybody else has places in the general area and never enters the lane or
+anything behind it. Who goes through security is decided by where they are
+going rather than by a flag on the person, which is why nobody can be checked
+and then wander somewhere they should not be.
+
+Nobody checks anything on the way out, so during an evacuation a checkpoint is
+ordinary floor, the restriction is ignored, and the VIP count has no effect.
+The count is ignored rather than refused, so switching mode to compare does not
+need it cleared first.
+
+Refusals are specific: no checkpoints at all, checkpoints that gate nothing, or
+more VIPs than the restricted area holds each say so.
+
 ### Example venues
 
 Four plans in `app/seed/venues/`, loaded on boot when the database is empty, so
@@ -135,14 +195,36 @@ At the default 150 people, each demonstrates something different:
 
 | Venue | Grade | What it shows |
 |---|---|---|
-| Arena | A | Four stands round a solid court, so the concourse is a ring |
-| Theatre | A | Stage, orchestra and balcony, with aisles between them |
+| Arena | A | Four stands round a solid court; turnstiles in, gates out |
+| Theatre | A | Stage, orchestra and balcony; foyer doors in, four ways out |
 | Stadium | A | Two tiers reached only through vomitories — the pinch is inside, not at the doors |
 | Nightclub | B | A packed floor and a fire exit down a 1 m gap behind the bar |
 
 They are ASCII plans rather than JSON, because the point of an example is that
 a person can read it and a grid of digits is not readable. `to_ascii()` turns a
 venue drawn in the editor back into one.
+
+### Proposed plans
+
+When a run finishes, the buildable parts of its advice are applied to the plan
+and offered in a dialog: the changed venue drawn with the altered cells
+outlined, the changes listed underneath, and a button that saves it as
+*"&lt;name&gt; suggested"*, runs it with the same settings, and opens the two
+side by side.
+
+Only geometry can be drawn. Widening a doorway, opening out a constriction and
+marking entrances as usable exits are all marks on a plan; putting up signage
+and capping attendance are not, and those are shown as notes rather than
+silently dropped.
+
+Two things the generator refuses to do. It never opens the outer shell — a
+proposal with a hole in the side of the building is not a proposal — and it
+checks the result can still be evacuated before offering it, because handing
+somebody an unusable plan would be a confusing way to find out otherwise.
+
+The point is the comparison at the end. The estimate attached to a
+recommendation is an extrapolation from one run; this replaces it with a second
+one.
 
 ### Comparison
 

@@ -33,8 +33,14 @@ MAX_FINDINGS = 5
 SPAWN_MAJORITY = 0.5
 
 
-def detect(grid: Grid, density: dict, limit: int = MAX_FINDINGS) -> list[dict]:
-    """Crowded regions, worst first."""
+def detect(grid: Grid, density: dict, limit: int = MAX_FINDINGS,
+           mode: str = "evacuation") -> list[dict]:
+    """Crowded regions, worst first.
+
+    An arrival is measured against the entrances: a queue builds on the way in
+    rather than on the way out, and calling it a queue at an exit would point
+    at the wrong door.
+    """
     above = density["ticks_above_threshold"]
     peak = density["peak_density"]
 
@@ -42,7 +48,11 @@ def detect(grid: Grid, density: dict, limit: int = MAX_FINDINGS) -> list[dict]:
     if not crowded:
         return []
 
-    to_exit = distance_field(grid, grid.exit_cells)
+    arriving = mode == "arrival"
+    doorways = grid.entrances if arriving else grid.exits
+    door_cells = grid.entrance_cells if arriving else grid.exit_cells
+    door_word = "entrance" if arriving else "exit"
+    to_exit = distance_field(grid, door_cells)
     regions = _components(grid, crowded)
 
     total_ticks = max(1, max(density.get("last_crowded_tick") or [1]))
@@ -51,7 +61,8 @@ def detect(grid: Grid, density: dict, limit: int = MAX_FINDINGS) -> list[dict]:
     for cells in regions:
         if len(cells) < MIN_REGION_CELLS:
             continue
-        findings.append(_describe(grid, cells, above, peak, to_exit, density, total_ticks))
+        findings.append(_describe(grid, cells, above, peak, to_exit, density,
+                                  total_ticks, doorways, door_word))
 
     # Starting density is reported but never outranks a real bottleneck. It is
     # a fact about how many people were placed where, not about the layout, and
@@ -108,7 +119,8 @@ def _passage_width(grid: Grid, x: int, y: int) -> int:
 
 
 def _describe(grid: Grid, cells: list[int], above: list[int], peak: list[float],
-              to_exit: dict, density: dict, total_ticks: int) -> dict:
+              to_exit: dict, density: dict, total_ticks: int,
+              doorways, door_word: str) -> dict:
     width = grid.width
     points = [(i % width, i // width) for i in cells]
 
@@ -134,7 +146,7 @@ def _describe(grid: Grid, cells: list[int], above: list[int], peak: list[float],
     widths = [(_passage_width(grid, x, y), (x, y)) for x, y in points]
     narrowest, pinch_at = min(widths)
     exit_distance = min((to_exit.get(p) for p in points if p in to_exit), default=None)
-    nearest_exit = _nearest_exit(grid, points)
+    nearest_exit = _nearest_exit(doorways, grid, points)
 
     first = [density["first_crowded_tick"][i] for i in cells if above[i]]
     last = [density["last_crowded_tick"][i] for i in cells if above[i]]
@@ -187,15 +199,16 @@ def _describe(grid: Grid, cells: list[int], above: list[int], peak: list[float],
         "severity": crowded_ticks,
         "where": _where(grid, centre),
         "label": _label(kind, narrowest, nearest_exit, exit_distance,
-                        _where(grid, pinch_at if kind == "pinch" else centre)),
+                        _where(grid, pinch_at if kind == "pinch" else centre),
+                        door_word),
         "detail": _detail(peak_density, longest_spell, len(cells),
                           density["threshold"], kind),
     }
 
 
-def _nearest_exit(grid: Grid, points: list[tuple[int, int]]) -> int | None:
+def _nearest_exit(doorways, grid: Grid, points: list[tuple[int, int]]) -> int | None:
     best_id, best = None, None
-    for exit_ in grid.exits:
+    for exit_ in doorways:
         field = distance_field(grid, list(exit_.cells))
         reachable = [field[p] for p in points if p in field]
         if not reachable:
@@ -226,18 +239,18 @@ def _where(grid: Grid, centre: tuple[int, int]) -> str:
 
 
 def _label(kind: str, narrowest: int, nearest_exit: int | None,
-           exit_distance: int | None, where: str) -> str:
+           exit_distance: int | None, where: str, door_word: str = "exit") -> str:
     if kind == "spawn_density":
         return f"Crowd starts packed in the {where}"
     
     if kind == "exit_approach":
-        return f"Queue at exit {nearest_exit}"
+        return f"Queue at {door_word} {nearest_exit}"
     if kind == "pinch":
         return f"{narrowest} m gap in the {where} of the plan"
     # "Open floor" said where but not what. Naming the nearest door gives the
     # finding something to be next to.
     if nearest_exit is not None and exit_distance is not None:
-        return f"Crush in the {where}, {exit_distance} m from exit {nearest_exit}"
+        return f"Crush in the {where}, {exit_distance} m from {door_word} {nearest_exit}"
     return f"Crush in the {where} of the plan"
 
 

@@ -1,8 +1,13 @@
 # Arena
-# Four stands around a court, with a gate on each side. The court is
-# solid, so the concourse is a ring and the crowd has to travel round
-# it rather than across it.
-###############EE###############
+# Four stands around a court, with a gate on each side and turnstile
+# banks at two corners. The court is solid, so the concourse is a ring
+# and the crowd has to travel round it rather than across it.
+# 
+# Worth running both ways: the turnstiles are the limit coming in, and
+# they are not exits, so they count for nothing going out. The bag
+# boxes in two corners are reached only through a checkpoint, so they
+# are where the VIPs go.
+###NNN#########EE###############
 #..............................#
 #..............................#
 #.......SSSSSSSSSSSSSSSS.......#
@@ -17,8 +22,8 @@ E..SS.....BBBBBBBBBBBB.....SS..E
 #.........BBBBBBBBBBBB.........#
 #..............................#
 #..............................#
-#.......SSSSSSSSSSSSSSSS.......#
-#.......SSSSSSSSSSSSSSSS.......#
-#..............................#
-#..............................#
-###############EE###############
+###CC##.SSSSSSSSSSSSSSSS.......#
+##SSSS#.SSSSSSSSSSSSSSSS.......#
+##SSSS#........................#
+##SSSS#........................#
+###############EE#########NNN###

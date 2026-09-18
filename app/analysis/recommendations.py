@@ -21,17 +21,31 @@ from ..config import Config
 PRIORITIES = ("critical", "high", "medium", "low")
 
 
+def _door_word(metrics: dict) -> str:
+    """Whether this run's doors are exits or entrances.
+
+    Every door rule reads the same metrics, because filling a room and emptying
+    it are the same arithmetic pointed in opposite directions. Only the noun
+    changes, and getting it wrong would send someone to the wrong side of the
+    building.
+    """
+    return "entrance" if metrics.get("mode") == "arrival" else "exit"
+
+
 def recommend(grid, metrics: dict, findings: list[dict], settings: dict) -> list[dict]:
-    rules = (
-        _people_left_behind,
-        _did_not_clear,
+    arriving = metrics.get("mode") == "arrival"
+
+    shared = (
         _not_enough_exit,
         _uneven_exit_use,
         _pinch_points,
-        _entrances_could_be_exits,
         _crowd_too_large,
-        _crowd_starts_packed,
-        _distance_is_the_problem,
+    )
+    rules = (
+        (_people_left_behind, _did_not_clear)
+        + shared
+        + ((_stopped_short,) if arriving else
+           (_entrances_could_be_exits, _crowd_starts_packed, _distance_is_the_problem))
     )
 
     out = []
@@ -72,12 +86,14 @@ def _people_left_behind(grid, metrics, findings, settings):
     stranded = metrics["crowd"]["stranded"]
     if not stranded:
         return None
+    word = _door_word(metrics)
     return _tip(
         "critical",
-        f"{stranded} people have no route out",
-        "Part of the floor is cut off from every exit. Nothing else about this "
-        "venue matters until that is fixed.",
-        "Check for a wall or barrier closing off that area, or add an exit to it.",
+        f"{stranded} people have no route {'in' if word == 'entrance' else 'out'}",
+        f"Part of the floor is cut off from every {word}. Nothing else about "
+        "this venue matters until that is fixed.",
+        f"Check for a wall or barrier closing off that area, or add {'an' if word == 'entrance' else 'an'} "
+        f"{word} to it.",
         {"stranded": stranded},
     )
 
@@ -85,13 +101,40 @@ def _people_left_behind(grid, metrics, findings, settings):
 def _did_not_clear(grid, metrics, findings, settings):
     if metrics["crowd"]["status"] == "complete":
         return None
-    inside = metrics["crowd"]["agents"] - metrics["crowd"]["evacuated"]
+    arriving = metrics.get("mode") == "arrival"
+    outstanding = metrics["crowd"]["agents"] - metrics["crowd"]["evacuated"]
     return _tip(
         "critical",
-        "The venue did not empty",
-        f"{inside} people were still inside when the simulation ended.",
-        "Widen the exits or reduce the crowd, then run it again.",
-        {"still_inside": inside, "status": metrics["crowd"]["status"]},
+        "The venue did not fill" if arriving else "The venue did not empty",
+        (f"{outstanding} people never reached a place."
+         if arriving else
+         f"{outstanding} people were still inside when the simulation ended."),
+        ("Widen the entrances, open the floor up, or reduce the crowd, then run "
+         "it again." if arriving else
+         "Widen the exits or reduce the crowd, then run it again."),
+        {"outstanding": outstanding, "status": metrics["crowd"]["status"]},
+    )
+
+
+def _stopped_short(grid, metrics, findings, settings):
+    """People who gave up on reaching a place and stood in a gangway.
+
+    Only meaningful for an arrival. It is the clearest sign a venue is being
+    filled beyond what its circulation routes support: everyone got in, and
+    some of them had nowhere to go once they had.
+    """
+    stopped = metrics["crowd"].get("stopped_short", 0)
+    if not stopped:
+        return None
+    return _tip(
+        "high",
+        f"{stopped} people ended up standing in a circulation route",
+        "They could not reach anywhere to stand and stopped where they were. "
+        "A gangway with people standing in it is not a gangway.",
+        "Widen the routes into the seating, or reduce the crowd until everyone "
+        "has somewhere to go.",
+        {"stopped_short": stopped},
+        weight=20,
     )
 
 
@@ -104,6 +147,7 @@ def _not_enough_exit(grid, metrics, findings, settings):
     if time["door_floor_ticks"] < 40:
         return None
 
+    word = _door_word(metrics)
     busiest = max(exits["doors"], key=lambda d: d["used"])
     extra = max(1, busiest["width"])          # doubling the busiest door
     new_width = exits["total_width"] + extra
@@ -121,12 +165,12 @@ def _not_enough_exit(grid, metrics, findings, settings):
 
     return _tip(
         "high",
-        f"Widen exit {busiest['id']}",
-        f"The doors are what limits this venue: {exits['total_width']} m of exit "
+        f"Widen {word} {busiest['id']}",
+        f"The doors are what limits this venue: {exits['total_width']} m of {word} "
         f"for {exits['people_per_metre']:.0f} people per metre. Even with no "
         "congestion at all, the crowd cannot pass through faster than "
         f"{_seconds(time['door_floor_ticks'])} s.",
-        f"Take exit {busiest['id']} from {busiest['width']} m to "
+        f"Take {word} {busiest['id']} from {busiest['width']} m to "
         f"{busiest['width'] + extra} m.",
         {
             "exit_id": busiest["id"],
@@ -152,6 +196,7 @@ def _uneven_exit_use(grid, metrics, findings, settings):
     if len(exits["doors"]) < 2 or exits["imbalance"] < 0.15:
         return None
 
+    word = _door_word(metrics)
     worst = max(exits["doors"], key=lambda d: d["overload"])
     idle = min(exits["doors"], key=lambda d: d["overload"])
     if worst["overload"] < 0.15:
@@ -159,18 +204,18 @@ def _uneven_exit_use(grid, metrics, findings, settings):
 
     already_managed = settings.get("routing") == "balanced"
     action = (
-        f"Signage or marshals directing people towards exit {idle['id']}."
+        f"Signage or marshals directing people towards {word} {idle['id']}."
         if not already_managed
-        else f"Exit {idle['id']} is underused even with managed routing — it is "
-             "probably hard to reach rather than hard to find."
+        else f"{word.capitalize()} {idle['id']} is underused even with managed "
+             "routing — it is probably hard to reach rather than hard to find."
     )
 
     return _tip(
         "high",
-        f"Exit {worst['id']} is doing too much of the work",
+        f"{word.capitalize()} {worst['id']} is doing too much of the work",
         f"It took {worst['share'] * 100:.0f}% of the crowd on "
-        f"{worst['capacity_share'] * 100:.0f}% of the exit width, while exit "
-        f"{idle['id']} took {idle['share'] * 100:.0f}%.",
+        f"{worst['capacity_share'] * 100:.0f}% of the {word} width, while "
+        f"{word} {idle['id']} took {idle['share'] * 100:.0f}%.",
         action,
         {
             "overloaded_exit": worst["id"],

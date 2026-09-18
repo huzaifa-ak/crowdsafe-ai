@@ -58,3 +58,19 @@ def test_ascii_grid_fixture_encodes_cells(ascii_grid):
     assert venue["width"] == 5
     assert venue["height"] == 3
     assert venue["cells"] == "11111" "15041" "11111"
+
+
+def test_javascript_is_served_as_a_module_script(client):
+    """Windows registers .js as text/plain, and a browser will not execute a
+    module script served with that type — the page loads and quietly does
+    nothing. Linux gets it right, so this only breaks on one developer's
+    machine and never in production."""
+    response = client.get("/static/js/editor.js")
+    assert response.status_code == 200
+    assert "javascript" in response.headers["Content-Type"]
+
+
+def test_stylesheets_are_served_as_css(client):
+    response = client.get("/static/css/app.css")
+    assert response.status_code == 200
+    assert "text/css" in response.headers["Content-Type"]

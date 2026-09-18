@@ -380,3 +380,131 @@ def test_a_run_comes_back_with_recommendations(client, ascii_grid):
 
     fetched = client.get(f"/api/simulations/{created['id']}").get_json()
     assert fetched["recommendations"] == created["recommendations"]
+
+
+# The proposal ---------------------------------------------------------------
+
+
+@pytest.fixture
+def narrow_venue(client, ascii_grid):
+    return client.post("/api/venues", json=ascii_grid(
+        """
+        ######################
+        #SSSSSSSSSSSS........#
+        #SSSSSSSSSSSS........#
+        #SSSSSSSSSSSS........#
+        #SSSSSSSSSSSS........#
+        ##########E###########
+        """,
+        name="Main hall",
+    )).get_json()["id"]
+
+
+def test_a_run_offers_a_plan_with_its_advice_applied(client, narrow_venue):
+    run_id = run(client, narrow_venue, num_agents=120).get_json()["id"]
+    proposal = client.get(f"/api/simulations/{run_id}/proposal").get_json()
+
+    assert proposal["available"] is True
+    assert proposal["suggested_name"] == "Main hall suggested"
+    assert proposal["after"]["cells"] != proposal["before"]["cells"]
+    assert proposal["changed_cells"]
+
+
+def test_the_proposal_actually_widens_the_door(client, narrow_venue):
+    from app.engine.grid import Grid
+
+    run_id = run(client, narrow_venue, num_agents=120).get_json()["id"]
+    proposal = client.get(f"/api/simulations/{run_id}/proposal").get_json()
+
+    before = Grid(**proposal["before"])
+    after = Grid(**proposal["after"])
+    assert after.total_exit_width > before.total_exit_width
+
+
+def test_the_proposal_is_a_venue_that_can_be_run(client, narrow_venue):
+    """The whole point: it is a plan, not a paragraph."""
+    original = run(client, narrow_venue, num_agents=120).get_json()
+    proposal = client.get(f"/api/simulations/{original['id']}/proposal").get_json()
+
+    saved = client.post("/api/venues", json={
+        "name": proposal["suggested_name"], **proposal["after"],
+    })
+    assert saved.status_code == 201
+
+    improved = client.post("/api/simulations", json={
+        "venue_id": saved.get_json()["id"], "config": proposal["config"],
+    }).get_json()
+    assert improved["summary"]["clearing_ticks"] < original["summary"]["clearing_ticks"]
+
+
+def test_advice_that_is_not_a_plan_change_is_passed_through_as_a_note(client, narrow_venue):
+    """Signage and capping attendance are real recommendations and neither is a
+    wall. They are shown with the proposal rather than silently dropped."""
+    run_id = run(client, narrow_venue, num_agents=120).get_json()["id"]
+    changes = client.get(f"/api/simulations/{run_id}/proposal").get_json()["changes"]
+    assert any(c["drawn"] for c in changes)
+    assert any(not c["drawn"] for c in changes)
+
+
+def test_a_venue_with_nothing_to_fix_offers_no_proposal(client, ascii_grid):
+    roomy = client.post("/api/venues", json=ascii_grid(
+        """
+        ######################
+        #....................#
+        #..SSSSSS..SSSSSS....#
+        #..SSSSSS..SSSSSS....#
+        #....................#
+        EEEEEEEEEEEEEEEEEEEEEE
+        """,
+        name="Open hall",
+    )).get_json()["id"]
+    run_id = run(client, roomy, num_agents=40).get_json()["id"]
+    proposal = client.get(f"/api/simulations/{run_id}/proposal").get_json()
+    assert proposal["available"] is False
+    assert proposal["reason"]
+
+
+def test_the_proposal_never_breaches_the_outer_wall(client, ascii_grid):
+    """Opening a pinch means clearing what narrows it. A proposal that puts a
+    hole in the side of the building is not a proposal."""
+    from app.engine.grid import Grid
+
+    pinched = client.post("/api/venues", json=ascii_grid(
+        """
+        ######################
+        #SSSSSSSS............#
+        #SSSSSSSS............#
+        #SSSSSSSS............#
+        #SSSSSSSS............#
+        #SSSSSSSS............#
+        #########..###########
+        #####................#
+        #####................#
+        #####...............E#
+        ######################
+        """,
+        name="Pinched hall",
+    )).get_json()["id"]
+    run_id = run(client, pinched, num_agents=110).get_json()["id"]
+    proposal = client.get(f"/api/simulations/{run_id}/proposal").get_json()
+    if not proposal["available"]:
+        return
+
+    # Doors in the outer wall are fine, and widening one is the point. What
+    # must never appear is bare floor on the boundary, which would be a hole.
+    from app.cells import ENTRANCE, EXIT
+
+    after = Grid(**proposal["after"])
+    boundary = (
+        [(x, 0) for x in range(after.width)]
+        + [(x, after.height - 1) for x in range(after.width)]
+        + [(0, y) for y in range(after.height)]
+        + [(after.width - 1, y) for y in range(after.height)]
+    )
+    for x, y in boundary:
+        if after.is_walkable(x, y):
+            assert after.at(x, y) in (EXIT, ENTRANCE), f"hole at {x}, {y}"
+
+
+def test_a_missing_run_has_no_proposal(client):
+    assert client.get("/api/simulations/999/proposal").status_code == 404

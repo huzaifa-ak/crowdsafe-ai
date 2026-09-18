@@ -19,14 +19,23 @@ DISPERSAL_FRACTION = 0.35
 
 
 def compute(grid: Grid, result, settings: dict, longest_walk: int | None) -> dict:
-    """Fold a run into the numbers everything downstream reads."""
+    """Fold a run into the numbers everything downstream reads.
+
+    An arrival is measured against the same clock and the same floor, but
+    against its entrances rather than its exits: what limits filling a room is
+    how fast people can get in and how far they then have to walk.
+    """
     walkable = sum(1 for cell in grid.cells if cell in WALKABLE)
+    arriving = settings.get("mode") == "arrival"
+    doors = grid.entrances if arriving else grid.exits
+    usage = result.entrance_usage if arriving else result.exit_usage
 
     return {
+        "mode": settings.get("mode", "evacuation"),
         "crowd": _crowd(result),
-        "time": _time(grid, result, settings, longest_walk),
+        "time": _time(grid, result, settings, longest_walk, doors),
         "congestion": _congestion(grid, result, walkable),
-        "exits": _exits(grid, result, settings),
+        "exits": _doors(doors, usage, result, settings),
         "trace": {"ticks": len(result.trace)},
     }
 
@@ -38,10 +47,13 @@ def _crowd(result) -> dict:
         "evacuated": result.evacuated,
         "stranded": result.stranded,
         "reroutes": result.reroutes,
+        # Arrival only: people who never reached a place and stopped in a
+        # circulation route instead.
+        "stopped_short": getattr(result, "stopped_short", 0),
     }
 
 
-def _time(grid: Grid, result, settings: dict, longest_walk: int | None) -> dict:
+def _time(grid: Grid, result, settings: dict, longest_walk: int | None, doors) -> dict:
     """Clearing time, and the two floors it should be read against.
 
     A raw clearing time means little on its own: twelve seconds is fine in a
@@ -52,9 +64,8 @@ def _time(grid: Grid, result, settings: dict, longest_walk: int | None) -> dict:
     """
     clearing = result.clearing_ticks
     walk_floor = (longest_walk or 0) / settings["speed"]
-    door_floor = (
-        result.agent_count / grid.total_exit_width if grid.total_exit_width else None
-    )
+    total_width = sum(door.width for door in doors)
+    door_floor = result.agent_count / total_width if total_width else None
     free_flow = max(walk_floor, door_floor) if door_floor else None
 
     return {
@@ -132,20 +143,20 @@ def _congestion(grid: Grid, result, walkable: int) -> dict:
     }
 
 
-def _exits(grid: Grid, result, settings: dict) -> dict:
+def _doors(doorways, usage: dict, result, settings: dict) -> dict:
     """Per-door usage, and how far that is from what the doors could carry.
 
     Share is compared against each door's share of the total width, not against
     an even split. A 3 m door beside a 1 m one *should* carry three quarters of
     the crowd; penalising that would be penalising the venue for working.
     """
-    total_width = grid.total_exit_width
+    total_width = sum(door.width for door in doorways)
     evacuated = max(1, result.evacuated)
 
     doors = []
     worst_gap = 0.0
-    for exit_ in grid.exits:
-        used = result.exit_usage.get(exit_.id, 0)
+    for exit_ in doorways:
+        used = usage.get(exit_.id, 0)
         share = used / evacuated
         capacity_share = exit_.width / total_width if total_width else 0
         gap = share - capacity_share

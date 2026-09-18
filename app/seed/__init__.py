@@ -20,7 +20,8 @@ from pathlib import Path
 
 VENUES_DIR = Path(__file__).parent / "venues"
 
-CHAR_TO_CODE = {".": "0", "#": "1", "B": "2", "N": "3", "E": "4", "S": "5"}
+CHAR_TO_CODE = {".": "0", "#": "1", "B": "2", "N": "3", "E": "4", "S": "5",
+                "C": "6"}
 CODE_TO_CHAR = {code: char for char, code in CHAR_TO_CODE.items()}
 
 
